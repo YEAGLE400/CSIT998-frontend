@@ -69,7 +69,6 @@ export function StudentProfileCard({ profile, isLoading }: StudentProfileCardPro
       <CardContent>
         <ScrollArea className="h-[300px] pr-4">
           <div className="space-y-4">
-            {/* Summary */}
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                 <Brain className="h-4 w-4 text-purple-500 shrink-0" />
@@ -79,8 +78,6 @@ export function StudentProfileCard({ profile, isLoading }: StudentProfileCardPro
                 {profile.summary}
               </p>
             </div>
-
-            {/* Root Cause */}
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                 <Lightbulb className="h-4 w-4 text-yellow-500 shrink-0" />
@@ -91,7 +88,6 @@ export function StudentProfileCard({ profile, isLoading }: StudentProfileCardPro
               </p>
             </div>
 
-            {/* Evidence Highlights */}
             {profile.evidence && (
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm font-medium text-foreground">

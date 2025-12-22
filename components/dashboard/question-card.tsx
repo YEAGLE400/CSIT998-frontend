@@ -64,15 +64,12 @@ export function QuestionCard({ item, onClick }: QuestionCardProps) {
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        {/* Question Preview */}
         <div
           className="text-sm text-foreground line-clamp-3 prose prose-sm max-w-none"
           dangerouslySetInnerHTML={{
             __html: item.QueHTML.slice(0, 200) + (item.QueHTML.length > 200 ? "..." : ""),
           }}
         />
-
-        {/* Images Preview */}
         {item.images && item.images.length > 0 && (
           <div className="flex gap-2 overflow-x-auto py-1">
             {item.images.slice(0, 2).map((img, idx) => (
@@ -90,8 +87,6 @@ export function QuestionCard({ item, onClick }: QuestionCardProps) {
             )}
           </div>
         )}
-
-        {/* Knowledge Tags */}
         <div className="flex flex-wrap gap-1">
           {item.knowName.slice(0, 3).map((tag, idx) => (
             <Badge key={idx} variant="outline" className="text-xs bg-primary/5">
@@ -106,7 +101,6 @@ export function QuestionCard({ item, onClick }: QuestionCardProps) {
           )}
         </div>
 
-        {/* Error Info (if incorrect) */}
         {!isCorrect && item.Error_Reason && (
           <div className="flex items-start gap-2 p-2 bg-red-500/5 rounded-lg">
             <AlertTriangle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
@@ -116,8 +110,6 @@ export function QuestionCard({ item, onClick }: QuestionCardProps) {
             </div>
           </div>
         )}
-
-        {/* Footer */}
         <div className="flex items-center justify-between pt-2 border-t border-border/50">
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
             <GraduationCap className="h-3 w-3" />

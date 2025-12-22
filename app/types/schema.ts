@@ -29,8 +29,6 @@ export interface KnowledgeStats {
   wrong_count: number;
 }
 
-// --- Agent Data Structures ---
-
 export interface CapabilityRadar {
   calculation: number;
   logic: number;
@@ -63,8 +61,6 @@ export interface CritiqueResult {
   feedback: string;
   pass_review: boolean;
 }
-
-// LangGraph State Snapshot for UI
 export interface AgentState {
   profile?: StudentProfile;
   current_report?: string;

@@ -34,10 +34,7 @@ import type { AnalysisItem, AnalysisResponse, KnowledgeStats } from "@/app/types
 type DashboardStage = "empty" | "data" | "agent";
 
 export default function DashboardPage() {
-  // Stage management
   const [stage, setStage] = useState<DashboardStage>("empty");
-
-  // Data state
   const [questions, setQuestions] = useState<AnalysisItem[]>([]);
   const [totalQuestions, setTotalQuestions] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
@@ -49,10 +46,8 @@ export default function DashboardPage() {
     wrong_count?: number;
   } | null>(null);
 
-  // File upload ref
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // LangGraph stream hook
   const {
     isStreaming,
     activeNode,
@@ -65,7 +60,6 @@ export default function DashboardPage() {
     reset: resetStream,
   } = useLangGraphStream();
 
-  // Handle file upload (triggers data fetch)
   const handleFileUpload = useCallback(async () => {
     setIsLoadingData(true);
     try {
@@ -83,7 +77,6 @@ export default function DashboardPage() {
     }
   }, []);
 
-  // Handle knowledge search
   const handleKnowledgeSearch = useCallback(async () => {
     if (!searchKnowledge.trim()) return;
 
@@ -104,19 +97,17 @@ export default function DashboardPage() {
     }
   }, [searchKnowledge]);
 
-  // Start agent analysis
+
   const handleStartAnalysis = useCallback(async () => {
     setStage("agent");
     await startStream(searchKnowledge || undefined);
   }, [startStream, searchKnowledge]);
 
-  // Reset to data stage
   const handleBackToData = useCallback(() => {
     resetStream();
     setStage("data");
   }, [resetStream]);
 
-  // Regenerate report
   const handleRegenerate = useCallback(async () => {
     resetStream();
     await startStream(searchKnowledge || undefined);
@@ -124,10 +115,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* User Profile Sidebar (Right) */}
       <UserProfileSidebar />
-
-      {/* Sidebar Navigation */}
       <aside className="fixed left-0 top-0 h-full w-16 border-r border-border/40 bg-card flex flex-col items-center py-4 gap-6 z-20">
         <Link href="/" className="flex items-center justify-center">
           <div className="h-10 w-10 rounded-xl bg-primary/20 flex items-center justify-center">
@@ -165,15 +153,13 @@ export default function DashboardPage() {
         </div>
       </aside>
 
-      {/* Main Content */}
       <main className="ml-16">
-        {/* Header */}
         <header className="border-b border-border/40 bg-background/80 backdrop-blur-sm sticky top-0 z-10">
           <div className="px-6 py-4">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
                 <h1 className="text-xl font-bold text-foreground">
-                  Learning Analytics Dashboard
+                  Learning Analytics and Feedback Dashboard
                 </h1>
                 <p className="text-sm text-muted-foreground">
                   {stage === "empty" && "Upload data to begin analysis"}
@@ -182,7 +168,6 @@ export default function DashboardPage() {
                 </p>
               </div>
 
-              {/* Stage-specific actions */}
               <div className="flex items-center gap-2">
                 {stage === "data" && (
                   <>
@@ -226,8 +211,6 @@ export default function DashboardPage() {
                 )}
               </div>
             </div>
-
-            {/* Agent Status Header (only in agent stage) */}
             {stage === "agent" && (
               <div className="mt-4">
                 <AgentStatusHeader
@@ -239,13 +222,9 @@ export default function DashboardPage() {
             )}
           </div>
         </header>
-
-        {/* Main Stage Content */}
         <div className="p-6">
-          {/* Stage 1: Empty/Skeleton */}
           {stage === "empty" && (
             <div className="space-y-6">
-              {/* Upload Section */}
               <Card className="border-dashed border-2 border-border/50 bg-muted/20">
                 <CardContent className="flex flex-col items-center justify-center py-16">
                   <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
@@ -285,8 +264,6 @@ export default function DashboardPage() {
                   </Button>
                 </CardContent>
               </Card>
-
-              {/* Skeleton Preview */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {[1, 2, 3, 4, 5, 6].map((i) => (
                   <Card key={i} className="border-border/30">
@@ -308,11 +285,8 @@ export default function DashboardPage() {
               </div>
             </div>
           )}
-
-          {/* Stage 2: Data Grid */}
           {stage === "data" && (
             <div className="space-y-6">
-              {/* Stats Bar */}
               {knowledgeStats && (
                 <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg">
                   <Badge variant="outline" className="text-sm py-1 px-3">
@@ -357,8 +331,6 @@ export default function DashboardPage() {
                   ))}
                 </div>
               )}
-
-              {/* Pagination Info */}
               <div className="flex items-center justify-between text-sm text-muted-foreground">
                 <span>
                   Showing {questions.length} of {totalQuestions} questions
@@ -367,13 +339,9 @@ export default function DashboardPage() {
               </div>
             </div>
           )}
-
-          {/* Stage 3: Agent Workspace (Split View) */}
           {stage === "agent" && (
             <div className="flex flex-col lg:flex-row gap-6 min-h-[calc(100vh-220px)]">
-              {/* Left Panel: Live Report */}
               <div className="flex-1 space-y-4 overflow-auto order-2 lg:order-1">
-                {/* Profile & Radar Row */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <StudentProfileCard
                     profile={outputs.profile}
@@ -384,8 +352,6 @@ export default function DashboardPage() {
                     isLoading={isStreaming && !outputs.profile}
                   />
                 </div>
-
-                {/* Report */}
                 <div className="min-h-[400px]">
                   <ReportViewer
                     report={outputs.currentReport}
@@ -396,15 +362,11 @@ export default function DashboardPage() {
                   />
                 </div>
               </div>
-
-              {/* Right Panel: Event Stream Terminal */}
               <div className="w-full lg:w-[500px] xl:w-[600px] shrink-0 order-1 lg:order-2">
                 <EventStreamTerminal events={events} className="h-[400px] lg:h-[calc(100vh-220px)]" />
               </div>
             </div>
           )}
-
-          {/* Error Display */}
           {error && (
             <div className="fixed bottom-4 right-4 p-4 bg-red-500/10 border border-red-500/30 rounded-lg max-w-md">
               <p className="text-sm text-red-600 font-medium">Error</p>

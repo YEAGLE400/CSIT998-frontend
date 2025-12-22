@@ -95,8 +95,6 @@ export function ReportViewer({
             )}
           </div>
         )}
-
-        {/* Critique Feedback */}
         {critique && !critique.pass_review && (
           <div className="shrink-0 p-3 bg-blue-500/5 rounded-lg border border-blue-500/20 overflow-hidden">
             <div className="flex items-center gap-2 text-sm font-medium text-blue-600 mb-1">
@@ -106,8 +104,6 @@ export function ReportViewer({
             <p className="text-xs text-muted-foreground break-words">{critique.feedback}</p>
           </div>
         )}
-
-        {/* Report Content */}
         <ScrollArea className="flex-1 min-h-0">
           {report ? (
             <div className="prose prose-sm max-w-none dark:prose-invert 
