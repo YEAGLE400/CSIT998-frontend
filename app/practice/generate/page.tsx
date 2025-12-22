@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { ArrowLeft, Brain, Zap, CheckCircle2, XCircle, Clock, Award, TrendingDown } from "lucide-react"
+import { ArrowLeft, Brain, Zap, CheckCircle2, XCircle, Clock, Award, TrendingDown, Sparkles, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -15,6 +15,7 @@ import { practiceStorage } from "@/lib/practice-storage"
 import { WeakKnowledgePoint, Question, UserAnswer, PracticeRecord } from "@/types/practice"
 
 type ViewMode = "selection" | "practice" | "analysis"
+type GeneratingStep = "analyzing" | "identifying" | "generating" | "done"
 
 export default function GeneratePracticePage() {
   const [viewMode, setViewMode] = useState<ViewMode>("selection")
@@ -26,14 +27,39 @@ export default function GeneratePracticePage() {
   const [currentAnswer, setCurrentAnswer] = useState("")
   const [startTime, setStartTime] = useState<Date | null>(null)
   const [questionStartTime, setQuestionStartTime] = useState<Date | null>(null)
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [generatingStep, setGeneratingStep] = useState<GeneratingStep>("analyzing")
+  const [generatingProgress, setGeneratingProgress] = useState(0)
 
   useEffect(() => {
     const points = practiceStorage.getWeakPoints()
     setWeakPoints(points.sort((a, b) => b.weaknessLevel - a.weaknessLevel))
   }, [])
 
-  const handleSelectKnowledgePoint = (point: WeakKnowledgePoint) => {
+  const simulateGeneration = async (point: WeakKnowledgePoint) => {
+    setIsGenerating(true)
     setSelectedPoint(point)
+    setGeneratingProgress(0)
+
+    // Step 1: Analyzing student performance
+    setGeneratingStep("analyzing")
+    await new Promise((resolve) => setTimeout(resolve, 1200))
+    setGeneratingProgress(33)
+
+    // Step 2: Identifying weak areas
+    setGeneratingStep("identifying")
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+    setGeneratingProgress(66)
+
+    // Step 3: Generating questions
+    setGeneratingStep("generating")
+    await new Promise((resolve) => setTimeout(resolve, 1200))
+    setGeneratingProgress(100)
+
+    // Step 4: Done
+    setGeneratingStep("done")
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
     const generatedQuestions = generateQuestions(point)
     setQuestions(generatedQuestions)
     setViewMode("practice")
@@ -42,6 +68,11 @@ export default function GeneratePracticePage() {
     setUserAnswers([])
     setCurrentQuestionIndex(0)
     setCurrentAnswer("")
+    setIsGenerating(false)
+  }
+
+  const handleSelectKnowledgePoint = (point: WeakKnowledgePoint) => {
+    simulateGeneration(point)
   }
 
   const generateQuestions = (point: WeakKnowledgePoint): Question[] => {
@@ -311,8 +342,88 @@ export default function GeneratePracticePage() {
       {/* Main Content */}
       <main className="container mx-auto px-6 py-12">
         <div className="max-w-4xl mx-auto">
+          {/* Generating Overlay */}
+          {isGenerating && (
+            <div className="space-y-6">
+              <Card className="border-border/50 bg-gradient-to-br from-primary/5 to-secondary/5">
+                <CardContent className="p-12">
+                  <div className="space-y-8 text-center">
+                    <div className="flex justify-center">
+                      <div className="relative">
+                        <div className="h-24 w-24 rounded-full bg-primary/10 flex items-center justify-center">
+                          <Loader2 className="h-12 w-12 text-primary animate-spin" />
+                        </div>
+                        <div className="absolute -top-2 -right-2">
+                          <Sparkles className="h-8 w-8 text-secondary animate-pulse" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <h2 className="text-2xl font-bold text-foreground">
+                        {generatingStep === "analyzing" && "Analyzing Your Performance"}
+                        {generatingStep === "identifying" && "Identifying Weak Areas"}
+                        {generatingStep === "generating" && "Generating Practice Questions"}
+                        {generatingStep === "done" && "Almost Ready!"}
+                      </h2>
+                      <p className="text-muted-foreground">
+                        {generatingStep === "analyzing" && "Reviewing your past practice records and performance metrics..."}
+                        {generatingStep === "identifying" && `Focusing on ${selectedPoint?.name} concepts that need improvement...`}
+                        {generatingStep === "generating" && "Creating personalized questions tailored to your level..."}
+                        {generatingStep === "done" && "Preparing your practice session..."}
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Progress value={generatingProgress} className="h-3" />
+                      <p className="text-sm text-muted-foreground">{generatingProgress}% Complete</p>
+                    </div>
+
+                    <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                      <Brain className="h-4 w-4" />
+                      <span>AI-powered question generation in progress</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {selectedPoint && (
+                <Card className="border-border/50 bg-card">
+                  <CardHeader>
+                    <CardTitle className="text-lg">Selected Topic</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <h3 className="font-semibold text-foreground">{selectedPoint.name}</h3>
+                        <Badge variant="secondary" className="text-xs">
+                          {selectedPoint.category}
+                        </Badge>
+                      </div>
+                      <div className="text-right space-y-1">
+                        <div className="flex items-center gap-3">
+                          <Zap className={`h-4 w-4 ${
+                            selectedPoint.weaknessLevel > 75 ? "text-destructive" :
+                            selectedPoint.weaknessLevel > 60 ? "text-orange-500" :
+                            "text-yellow-500"
+                          }`} />
+                          <span className="text-sm font-medium">
+                            {selectedPoint.weaknessLevel}% weak
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {selectedPoint.correctRate}% correct rate
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
+
           {/* Selection Mode */}
-          {viewMode === "selection" && (
+          {viewMode === "selection" && !isGenerating && (
             <div className="space-y-6">
               <Card className="border-border/50 bg-card">
                 <CardHeader>
@@ -341,7 +452,7 @@ export default function GeneratePracticePage() {
                               </Badge>
                             </div>
                             <div className="text-right space-y-1">
-                              <div className="flex items-center gap-1">
+                              <div className="flex items-center gap-3">
                                 <Zap className={`h-4 w-4 ${
                                   point.weaknessLevel > 75 ? "text-destructive" :
                                   point.weaknessLevel > 60 ? "text-orange-500" :
