@@ -1,421 +1,380 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import Link from "next/link"
-import { Brain, Sparkles, BookOpen, MessageSquare, Mic, TrendingUp, Clock, Target, Award } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { practiceStorage } from "@/lib/practice-storage"
+import { useState, useCallback, useRef } from "react";
+import Link from "next/link";
+import {
+  Sparkles,
+  Upload,
+  Search,
+  Play,
+  RotateCcw,
+  StopCircle,
+  ChevronLeft,
+  Database,
+  Zap,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AgentStatusHeader,
+  EventStreamTerminal,
+  CapabilityRadarChart,
+  QuestionCard,
+  StudentProfileCard,
+  ReportViewer,
+  UserProfileSidebar,
+} from "@/components/dashboard";
+import { useLangGraphStream } from "@/hooks/use-langgraph-stream";
+import { fetchAnalysis, fetchKnowledgeStats } from "@/lib/api";
+import type { AnalysisItem, AnalysisResponse, KnowledgeStats } from "@/app/types/schema";
+
+type DashboardStage = "empty" | "data" | "agent";
 
 export default function DashboardPage() {
-  const [practiceStats, setPracticeStats] = useState({
-    completed: 0,
-    totalQuestions: 0,
-    averageAccuracy: 0,
-    totalTime: 0,
-  })
+  const [stage, setStage] = useState<DashboardStage>("empty");
+  const [questions, setQuestions] = useState<AnalysisItem[]>([]);
+  const [totalQuestions, setTotalQuestions] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isLoadingData, setIsLoadingData] = useState(false);
+  const [searchKnowledge, setSearchKnowledge] = useState("");
+  const [knowledgeStats, setKnowledgeStats] = useState<{
+    accuracy?: number;
+    correct_count?: number;
+    wrong_count?: number;
+  } | null>(null);
 
-  useEffect(() => {
-    const records = practiceStorage.getPracticeRecords()
-    const totalCompleted = records.length
-    const totalQuestions = records.reduce((sum, r) => sum + r.totalQuestions, 0)
-    const totalTime = records.reduce((sum, r) => sum + r.timeSpent, 0)
-    const averageAccuracy = records.length > 0
-      ? Math.round(records.reduce((sum, r) => sum + r.accuracy, 0) / records.length)
-      : 0
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-    setPracticeStats({
-      completed: totalCompleted,
-      totalQuestions,
-      averageAccuracy,
-      totalTime,
-    })
-  }, [])
-  const modules = [
-    {
-      id: "practice",
-      name: "Practice",
-      icon: Brain,
-      href: "/practice",
-      color: "secondary",
-      stats: { completed: practiceStats.completed, accuracy: practiceStats.averageAccuracy },
-    },
-    {
-      id: "solver",
-      name: "Solver",
-      icon: Sparkles,
-      href: "/solver",
-      color: "primary",
-      stats: { used: 23, accuracy: 94 },
-    },
-    {
-      id: "mentor",
-      name: "Mentor",
-      icon: MessageSquare,
-      href: "/dashboard",
-      color: "accent",
-      stats: { insights: 8, helpful: 100 },
-    },
-    {
-      id: "library",
-      name: "Library",
-      icon: BookOpen,
-      href: "/library",
-      color: "secondary",
-      stats: { articles: 15, topics: 3 },
-    },
-    {
-      id: "speak",
-      name: "Speak",
-      icon: Mic,
-      href: "/speak",
-      color: "primary",
-      stats: { minutes: 142, words: 87 },
-    },
-  ]
+  const {
+    isStreaming,
+    activeNode,
+    completedNodes,
+    events,
+    outputs,
+    error,
+    startStream,
+    stopStream,
+    reset: resetStream,
+  } = useLangGraphStream();
 
-  const [progressData, setProgressData] = useState([
-    { day: "Mon", value: 0, sessions: 0, timeSpent: 0 },
-    { day: "Tue", value: 0, sessions: 0, timeSpent: 0 },
-    { day: "Wed", value: 0, sessions: 0, timeSpent: 0 },
-    { day: "Thu", value: 0, sessions: 0, timeSpent: 0 },
-    { day: "Fri", value: 0, sessions: 0, timeSpent: 0 },
-    { day: "Sat", value: 0, sessions: 0, timeSpent: 0 },
-    { day: "Sun", value: 0, sessions: 0, timeSpent: 0 },
-  ])
+  const handleFileUpload = useCallback(async () => {
+    setIsLoadingData(true);
+    try {
+      const response: AnalysisResponse = await fetchAnalysis(1, 20);
+      setQuestions(response.items);
+      setTotalQuestions(response.total);
+      setCurrentPage(response.page);
+      setStage("data");
+      setKnowledgeStats(null);
+      setSearchKnowledge("");
+    } catch (err) {
+      console.error("Failed to fetch analysis data:", err);
+    } finally {
+      setIsLoadingData(false);
+    }
+  }, []);
 
-  useEffect(() => {
-    const records = practiceStorage.getPracticeRecords()
-    const today = new Date()
-    const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+  const handleKnowledgeSearch = useCallback(async () => {
+    if (!searchKnowledge.trim()) return;
 
-    // Get the past 7 days
-    const last7Days = Array.from({ length: 7 }, (_, i) => {
-      const date = new Date(today)
-      date.setDate(date.getDate() - (6 - i))
-      return {
-        dayName: dayNames[date.getDay()],
-        dateStr: date.toDateString(),
-      }
-    })
+    setIsLoadingData(true);
+    try {
+      const response: KnowledgeStats = await fetchKnowledgeStats(searchKnowledge);
+      setQuestions(response.items);
+      setTotalQuestions(response.items.length);
+      setKnowledgeStats({
+        accuracy: response.accuracy,
+        correct_count: response.correct_count,
+        wrong_count: response.wrong_count,
+      });
+    } catch (err) {
+      console.error("Failed to fetch knowledge stats:", err);
+    } finally {
+      setIsLoadingData(false);
+    }
+  }, [searchKnowledge]);
 
-    // Calculate data for each day
-    const newProgressData = last7Days.map(({ dayName, dateStr }) => {
-      const dayRecords = records.filter((record) => {
-        const recordDate = new Date(record.date)
-        return recordDate.toDateString() === dateStr
-      })
 
-      const sessions = dayRecords.length
-      const timeSpent = dayRecords.reduce((sum, r) => sum + r.timeSpent, 0)
-      const totalQuestions = dayRecords.reduce((sum, r) => sum + r.totalQuestions, 0)
+  const handleStartAnalysis = useCallback(async () => {
+    setStage("agent");
+    await startStream(searchKnowledge || undefined);
+  }, [startStream, searchKnowledge]);
 
-      // Value based on number of questions answered (0-100 scale)
-      const value = Math.min(100, (totalQuestions / 10) * 100)
+  const handleBackToData = useCallback(() => {
+    resetStream();
+    setStage("data");
+  }, [resetStream]);
 
-      return {
-        day: dayName,
-        value: Math.round(value),
-        sessions,
-        timeSpent,
-      }
-    })
-
-    setProgressData(newProgressData)
-  }, [practiceStats])
-
-  const [recentActivity, setRecentActivity] = useState<Array<{
-    type: string
-    action: string
-    time: string
-    color: string
-  }>>([])
-
-  useEffect(() => {
-    const records = practiceStorage.getPracticeRecords()
-    const activities = records.slice(0, 5).map((record) => {
-      const recordDate = new Date(record.date)
-      const now = new Date()
-      const diffMs = now.getTime() - recordDate.getTime()
-      const diffMins = Math.floor(diffMs / 60000)
-      const diffHours = Math.floor(diffMs / 3600000)
-      const diffDays = Math.floor(diffMs / 86400000)
-
-      let timeStr = ""
-      if (diffMins < 60) {
-        timeStr = `${diffMins} minute${diffMins !== 1 ? "s" : ""} ago`
-      } else if (diffHours < 24) {
-        timeStr = `${diffHours} hour${diffHours !== 1 ? "s" : ""} ago`
-      } else if (diffDays === 1) {
-        timeStr = "Yesterday"
-      } else {
-        timeStr = `${diffDays} days ago`
-      }
-
-      return {
-        type: "practice",
-        action: `Completed ${record.totalQuestions} questions on ${record.topic}`,
-        time: timeStr,
-        color: record.accuracy >= 80 ? "primary" : record.accuracy >= 60 ? "secondary" : "accent",
-      }
-    })
-
-    setRecentActivity(activities)
-  }, [practiceStats])
+  const handleRegenerate = useCallback(async () => {
+    resetStream();
+    await startStream(searchKnowledge || undefined);
+  }, [resetStream, startStream, searchKnowledge]);
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Sidebar Navigation */}
-      <aside className="fixed left-0 top-0 h-full w-20 border-r border-border/40 bg-card flex flex-col items-center py-6 gap-8">
+      <UserProfileSidebar />
+      <aside className="fixed left-0 top-0 h-full w-16 border-r border-border/40 bg-card flex flex-col items-center py-4 gap-6 z-20">
         <Link href="/" className="flex items-center justify-center">
           <div className="h-10 w-10 rounded-xl bg-primary/20 flex items-center justify-center">
             <Sparkles className="h-5 w-5 text-primary" />
           </div>
         </Link>
 
-        <div className="flex-1 flex flex-col gap-4">
-          {modules.map((module) => {
-            const Icon = module.icon
-            return (
-              <Link key={module.id} href={module.href}>
-                <div
-                  className={`h-12 w-12 rounded-xl flex items-center justify-center transition-all hover:scale-110 ${
-                    module.id === "mentor"
-                      ? "bg-accent text-accent-foreground"
-                      : "bg-muted/50 text-foreground hover:bg-muted"
-                  }`}
-                >
-                  <Icon className="h-5 w-5" />
-                </div>
-              </Link>
-            )
-          })}
+        <div className="flex-1 flex flex-col gap-2">
+          <Button
+            variant={stage === "empty" ? "default" : "ghost"}
+            size="icon"
+            className="h-10 w-10"
+            onClick={() => setStage("empty")}
+          >
+            <Upload className="h-5 w-5" />
+          </Button>
+          <Button
+            variant={stage === "data" ? "default" : "ghost"}
+            size="icon"
+            className="h-10 w-10"
+            disabled={questions.length === 0}
+            onClick={() => setStage("data")}
+          >
+            <Database className="h-5 w-5" />
+          </Button>
+          <Button
+            variant={stage === "agent" ? "default" : "ghost"}
+            size="icon"
+            className="h-10 w-10"
+            disabled={questions.length === 0}
+            onClick={() => setStage("agent")}
+          >
+            <Zap className="h-5 w-5" />
+          </Button>
         </div>
-
-        <Link href="/profile">
-          <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-all">
-            <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
-              <span className="text-xs font-semibold text-primary">JD</span>
-            </div>
-          </div>
-        </Link>
       </aside>
 
-      {/* Main Content */}
-      <main className="ml-20">
-        {/* Header */}
+      <main className="ml-16">
         <header className="border-b border-border/40 bg-background/80 backdrop-blur-sm sticky top-0 z-10">
-          <div className="container mx-auto px-8 py-6">
+          <div className="px-6 py-4">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-                <p className="text-sm text-muted-foreground">Welcome back! Here's your learning state</p>
+                <h1 className="text-xl font-bold text-foreground">
+                  Learning Analytics and Feedback Dashboard
+                </h1>
+                <p className="text-sm text-muted-foreground">
+                  {stage === "empty" && "Upload data to begin analysis"}
+                  {stage === "data" && `${totalQuestions} questions loaded`}
+                  {stage === "agent" && "Multi-Agent Analysis in Progress"}
+                </p>
               </div>
-              <Button size="sm" className="gap-2">
-                <Target className="h-4 w-4" />
-                Set Goals
-              </Button>
-            </div>
-          </div>
-        </header>
 
-        <div className="container mx-auto px-8 py-8">
-          <div className="space-y-8">
-            {/* Key Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <Card className="border-border/50 bg-card">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                      <TrendingUp className="h-5 w-5 text-primary" />
-                    </div>
-                    <Badge variant="secondary" className="bg-primary/10 text-primary text-xs">
-                      Practice
-                    </Badge>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-2xl font-bold text-foreground">{practiceStats.averageAccuracy}%</p>
-                    <p className="text-sm text-muted-foreground">Average Accuracy</p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-border/50 bg-card">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="h-10 w-10 rounded-xl bg-secondary/10 flex items-center justify-center">
-                      <Clock className="h-5 w-5 text-secondary" />
-                    </div>
-                    <Badge variant="secondary" className="bg-secondary/10 text-secondary text-xs">
-                      Sessions
-                    </Badge>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-2xl font-bold text-foreground">{practiceStats.completed}</p>
-                    <p className="text-sm text-muted-foreground">Practice Sessions</p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-border/50 bg-card">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="h-10 w-10 rounded-xl bg-accent/10 flex items-center justify-center">
-                      <Brain className="h-5 w-5 text-accent" />
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-2xl font-bold text-foreground">{practiceStats.totalQuestions}</p>
-                    <p className="text-sm text-muted-foreground">Questions Answered</p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-border/50 bg-card">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                      <Award className="h-5 w-5 text-primary" />
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-2xl font-bold text-foreground">
-                      {practiceStats.totalTime < 60
-                        ? `${practiceStats.totalTime}m`
-                        : `${Math.floor(practiceStats.totalTime / 60)}h ${practiceStats.totalTime % 60}m`}
-                    </p>
-                    <p className="text-sm text-muted-foreground">Learning Time</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Progress Chart */}
-            <Card className="border-border/50 bg-card">
-              <CardContent className="p-8">
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-xl font-semibold text-foreground">State of My Learning</h3>
-                      <p className="text-sm text-muted-foreground">Your activity over the past week</p>
-                    </div>
-                    <Button variant="ghost" size="sm">
-                      View Details
-                    </Button>
-                  </div>
-
-                  {/* Dot Grid Progress Chart */}
-                  <div className="flex items-end justify-between gap-4 h-48">
-                    {progressData.map((data, index) => (
-                      <div key={index} className="flex-1 flex flex-col items-center gap-3">
-                        <div className="flex-1 flex items-end w-full">
-                          <div
-                            className="w-full bg-primary/20 rounded-t-lg transition-all hover:bg-primary/30"
-                            style={{ height: `${data.value}%` }}
-                          />
-                        </div>
-                        <div className="text-xs text-muted-foreground font-medium">{data.day}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Two Column Layout */}
-            <div className="grid lg:grid-cols-2 gap-8">
-              {/* Module Status */}
-              <Card className="border-border/50 bg-card">
-                <CardContent className="p-8">
-                  <div className="space-y-6">
-                    <h3 className="text-xl font-semibold text-foreground">Module Overview</h3>
-
-                    <div className="space-y-4">
-                      {modules.map((module) => {
-                        const Icon = module.icon
-                        return (
-                          <Link key={module.id} href={module.href}>
-                            <div className="flex items-center justify-between p-4 bg-muted/20 rounded-xl hover:bg-muted/40 transition-colors cursor-pointer group">
-                              <div className="flex items-center gap-4">
-                                <div
-                                  className={`h-12 w-12 rounded-xl bg-${module.color}/20 flex items-center justify-center group-hover:scale-110 transition-transform`}
-                                >
-                                  <Icon className={`h-5 w-5 text-${module.color}`} />
-                                </div>
-                                <div>
-                                  <p className="font-medium text-foreground">{module.name}</p>
-                                  <p className="text-sm text-muted-foreground">
-                                    {Object.entries(module.stats)[0][0]}: {Object.entries(module.stats)[0][1]}
-                                  </p>
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                <p className="text-sm font-medium text-foreground">
-                                  {Object.entries(module.stats)[1][1]}
-                                  {Object.entries(module.stats)[1][0] === "accuracy" ? "%" : ""}
-                                </p>
-                                <p className="text-xs text-muted-foreground">{Object.entries(module.stats)[1][0]}</p>
-                              </div>
-                            </div>
-                          </Link>
-                        )
-                      })}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Recent Activity */}
-              <Card className="border-border/50 bg-card">
-                <CardContent className="p-8">
-                  <div className="space-y-6">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-xl font-semibold text-foreground">Recent Activity</h3>
-                      <Button variant="ghost" size="sm">
-                        View All
+              <div className="flex items-center gap-2">
+                {stage === "data" && (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        placeholder="Search knowledge point..."
+                        value={searchKnowledge}
+                        onChange={(e) => setSearchKnowledge(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && handleKnowledgeSearch()}
+                        className="w-64"
+                      />
+                      <Button variant="outline" size="icon" onClick={handleKnowledgeSearch}>
+                        <Search className="h-4 w-4" />
                       </Button>
                     </div>
+                    <Button onClick={handleStartAnalysis} className="gap-2">
+                      <Play className="h-4 w-4" />
+                      Start AI Analysis
+                    </Button>
+                  </>
+                )}
 
-                    <div className="space-y-4">
-                      {recentActivity.map((activity, index) => (
-                        <div key={index} className="flex items-start gap-4 p-4 bg-muted/20 rounded-xl">
-                          <div
-                            className={`h-10 w-10 rounded-xl bg-${activity.color}/20 flex items-center justify-center flex-shrink-0`}
-                          >
-                            <div className={`h-2 w-2 rounded-full bg-${activity.color}`} />
-                          </div>
-                          <div className="flex-1 space-y-1">
-                            <p className="text-sm font-medium text-foreground">{activity.action}</p>
-                            <p className="text-xs text-muted-foreground">{activity.time}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    <Card className="border-accent/30 bg-gradient-to-br from-accent/5 to-secondary/5">
-                      <CardContent className="p-6">
-                        <div className="flex items-start gap-4">
-                          <div className="h-10 w-10 rounded-xl bg-accent/20 flex items-center justify-center flex-shrink-0">
-                            <MessageSquare className="h-5 w-5 text-accent" />
-                          </div>
-                          <div className="space-y-2">
-                            <h4 className="text-sm font-semibold text-foreground">Mentor Insight</h4>
-                            <p className="text-sm text-muted-foreground leading-relaxed">
-                              You're excelling in problem-solving! Consider exploring advanced calculus to maintain
-                              momentum.
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                {stage === "agent" && (
+                  <>
+                    <Button variant="outline" onClick={handleBackToData} className="gap-2">
+                      <ChevronLeft className="h-4 w-4" />
+                      Back to Data
+                    </Button>
+                    {isStreaming ? (
+                      <Button variant="destructive" onClick={stopStream} className="gap-2">
+                        <StopCircle className="h-4 w-4" />
+                        Stop
+                      </Button>
+                    ) : (
+                      <Button onClick={handleRegenerate} className="gap-2">
+                        <RotateCcw className="h-4 w-4" />
+                        Regenerate
+                      </Button>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+            {stage === "agent" && (
+              <div className="mt-4">
+                <AgentStatusHeader
+                  activeNode={activeNode}
+                  completedNodes={completedNodes}
+                  isStreaming={isStreaming}
+                />
+              </div>
+            )}
+          </div>
+        </header>
+        <div className="p-6">
+          {stage === "empty" && (
+            <div className="space-y-6">
+              <Card className="border-dashed border-2 border-border/50 bg-muted/20">
+                <CardContent className="flex flex-col items-center justify-center py-16">
+                  <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                    <Upload className="h-8 w-8 text-primary" />
                   </div>
+                  <h3 className="text-lg font-semibold text-foreground mb-2">
+                    Upload Student Data
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-4 text-center max-w-md">
+                    Upload an Excel file containing student answer records to begin the analysis.
+                    The system will process and display the data.
+                  </p>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".xlsx,.xls,.csv"
+                    className="hidden"
+                    onChange={handleFileUpload}
+                  />
+                  <Button
+                    size="lg"
+                    onClick={() => {
+                      fileInputRef.current?.click();
+                      handleFileUpload();
+                    }}
+                    disabled={isLoadingData}
+                    className="gap-2"
+                  >
+                    {isLoadingData ? (
+                      <>Loading...</>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4" />
+                        Select File
+                      </>
+                    )}
+                  </Button>
                 </CardContent>
               </Card>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <Card key={i} className="border-border/30">
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Skeleton className="h-5 w-5 rounded-full" />
+                        <Skeleton className="h-4 w-20" />
+                        <Skeleton className="h-4 w-16" />
+                      </div>
+                      <Skeleton className="h-16 w-full" />
+                      <div className="flex gap-1">
+                        <Skeleton className="h-5 w-24" />
+                        <Skeleton className="h-5 w-20" />
+                      </div>
+                      <Skeleton className="h-4 w-full" />
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
+          {stage === "data" && (
+            <div className="space-y-6">
+              {knowledgeStats && (
+                <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg">
+                  <Badge variant="outline" className="text-sm py-1 px-3">
+                    Knowledge: {searchKnowledge}
+                  </Badge>
+                  <Badge
+                    variant="outline"
+                    className={`text-sm py-1 px-3 ${
+                      knowledgeStats.accuracy && knowledgeStats.accuracy >= 0.6
+                        ? "bg-green-500/10 text-green-600"
+                        : "bg-red-500/10 text-red-600"
+                    }`}
+                  >
+                    Accuracy: {((knowledgeStats.accuracy || 0) * 100).toFixed(1)}%
+                  </Badge>
+                  <Badge variant="outline" className="text-sm py-1 px-3 bg-green-500/10 text-green-600">
+                    Correct: {knowledgeStats.correct_count}
+                  </Badge>
+                  <Badge variant="outline" className="text-sm py-1 px-3 bg-red-500/10 text-red-600">
+                    Wrong: {knowledgeStats.wrong_count}
+                  </Badge>
+                </div>
+              )}
+
+              {/* Question Grid */}
+              {isLoadingData ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {[1, 2, 3, 4, 5, 6].map((i) => (
+                    <Card key={i} className="border-border/30">
+                      <CardContent className="p-4 space-y-3">
+                        <Skeleton className="h-5 w-full" />
+                        <Skeleton className="h-16 w-full" />
+                        <Skeleton className="h-4 w-3/4" />
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {questions.map((item) => (
+                    <QuestionCard key={item.ID} item={item} />
+                  ))}
+                </div>
+              )}
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
+                <span>
+                  Showing {questions.length} of {totalQuestions} questions
+                </span>
+                <span>Page {currentPage}</span>
+              </div>
+            </div>
+          )}
+          {stage === "agent" && (
+            <div className="flex flex-col lg:flex-row gap-6 min-h-[calc(100vh-220px)]">
+              <div className="flex-1 space-y-4 overflow-auto order-2 lg:order-1">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <StudentProfileCard
+                    profile={outputs.profile}
+                    isLoading={isStreaming && !outputs.profile}
+                  />
+                  <CapabilityRadarChart
+                    data={outputs.profile?.radar_data}
+                    isLoading={isStreaming && !outputs.profile}
+                  />
+                </div>
+                <div className="min-h-[400px]">
+                  <ReportViewer
+                    report={outputs.currentReport}
+                    insights={outputs.insights}
+                    critique={outputs.critique}
+                    revisionCount={outputs.revisionCount}
+                    isLoading={isStreaming && !outputs.currentReport}
+                  />
+                </div>
+              </div>
+              <div className="w-full lg:w-[500px] xl:w-[600px] shrink-0 order-1 lg:order-2">
+                <EventStreamTerminal events={events} className="h-[400px] lg:h-[calc(100vh-220px)]" />
+              </div>
+            </div>
+          )}
+          {error && (
+            <div className="fixed bottom-4 right-4 p-4 bg-red-500/10 border border-red-500/30 rounded-lg max-w-md">
+              <p className="text-sm text-red-600 font-medium">Error</p>
+              <p className="text-xs text-red-500">{error}</p>
+            </div>
+          )}
         </div>
       </main>
     </div>
-  )
+  );
 }

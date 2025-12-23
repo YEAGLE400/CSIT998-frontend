@@ -16,6 +16,9 @@ export default function LandingPage() {
               <span className="text-xl font-semibold text-foreground">Aura Learning</span>
             </div>
             <div className="hidden md:flex items-center gap-8">
+              <Link href="/dashboard" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                Dashboard
+              </Link>
               <Link href="/practice" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                 Practice
               </Link>
