@@ -59,7 +59,7 @@ export function StudentProfileCard({ profile, isLoading }: StudentProfileCardPro
             <CardTitle className="text-lg">Student Profile</CardTitle>
           </div>
           {profile.identified_knowledge_point && (
-            <Badge variant="default" className="bg-primary/90 text-xs max-w-[200px] truncate">
+            <Badge variant="default" className="bg-primary/90 text-xs">
               <Target className="h-3 w-3 mr-1 shrink-0" />
               <span>{profile.identified_knowledge_point}</span>
             </Badge>
