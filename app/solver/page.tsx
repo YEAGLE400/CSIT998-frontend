@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft, Upload, Lightbulb, Eye, ChevronRight, FileImage } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -8,8 +9,25 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export default function SolverPage() {
+  const searchParams = useSearchParams()
   const [showSteps, setShowSteps] = useState(false)
   const [currentStep, setCurrentStep] = useState(0)
+  const [problemQuestion, setProblemQuestion] = useState("")
+  const [problemContext, setProblemContext] = useState("")
+
+  useEffect(() => {
+    const question = searchParams.get("question")
+    const context = searchParams.get("context")
+
+    if (question) {
+      setProblemQuestion(decodeURIComponent(question))
+      setShowSteps(true)
+    }
+
+    if (context) {
+      setProblemContext(decodeURIComponent(context))
+    }
+  }, [searchParams])
 
   const steps = [
     {
