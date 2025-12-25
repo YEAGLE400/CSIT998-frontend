@@ -83,13 +83,13 @@ export function ReportViewer({
             </div>
             <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto">
               {insights.thinking_traps.map((trap, idx) => (
-                <Badge key={idx} variant="outline" className="text-xs bg-amber-500/10 text-amber-700 break-words max-w-full">
-                  <span className="line-clamp-2">{trap}</span>
+                <Badge key={idx} variant="outline" className="text-xs bg-amber-500/10 text-amber-700 break-all whitespace-normal h-auto py-1 text-left max-w-full">
+                  <span >{trap}</span>
                 </Badge>
               ))}
             </div>
             {insights.pitfall_guide && (
-              <p className="text-xs text-muted-foreground mt-2 break-words line-clamp-3">
+              <p className="text-xs text-muted-foreground mt-2 break-words">
                 {insights.pitfall_guide}
               </p>
             )}

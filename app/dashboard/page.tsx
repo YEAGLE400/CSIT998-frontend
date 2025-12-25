@@ -10,6 +10,7 @@ import {
   RotateCcw,
   StopCircle,
   ChevronLeft,
+  ChevronRight,
   Database,
   Zap,
 } from "lucide-react";
@@ -33,6 +34,8 @@ import type { AnalysisItem, AnalysisResponse, KnowledgeStats } from "@/app/types
 
 type DashboardStage = "empty" | "data" | "agent";
 
+const PAGE_SIZE = 12;
+
 export default function DashboardPage() {
   const [stage, setStage] = useState<DashboardStage>("empty");
   const [questions, setQuestions] = useState<AnalysisItem[]>([]);
@@ -40,13 +43,16 @@ export default function DashboardPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [searchKnowledge, setSearchKnowledge] = useState("");
+  const [activeKnowledge, setActiveKnowledge] = useState(""); // 当前激活的知识点搜索
   const [knowledgeStats, setKnowledgeStats] = useState<{
     accuracy?: number;
     correct_count?: number;
     wrong_count?: number;
   } | null>(null);
+  const [hasCompletedAnalysis, setHasCompletedAnalysis] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const totalPages = Math.ceil(totalQuestions / PAGE_SIZE);
 
   const {
     isStreaming,
@@ -60,16 +66,14 @@ export default function DashboardPage() {
     reset: resetStream,
   } = useLangGraphStream();
 
-  const handleFileUpload = useCallback(async () => {
+  // 加载分析数据
+  const loadAnalysisData = useCallback(async (page: number) => {
     setIsLoadingData(true);
     try {
-      const response: AnalysisResponse = await fetchAnalysis(1, 20);
+      const response: AnalysisResponse = await fetchAnalysis(page, PAGE_SIZE);
       setQuestions(response.items);
       setTotalQuestions(response.total);
       setCurrentPage(response.page);
-      setStage("data");
-      setKnowledgeStats(null);
-      setSearchKnowledge("");
     } catch (err) {
       console.error("Failed to fetch analysis data:", err);
     } finally {
@@ -77,14 +81,14 @@ export default function DashboardPage() {
     }
   }, []);
 
-  const handleKnowledgeSearch = useCallback(async () => {
-    if (!searchKnowledge.trim()) return;
-
+  // 加载知识点统计数据
+  const loadKnowledgeData = useCallback(async (knowledge: string, page: number) => {
     setIsLoadingData(true);
     try {
-      const response: KnowledgeStats = await fetchKnowledgeStats(searchKnowledge);
+      const response: KnowledgeStats = await fetchKnowledgeStats(knowledge, page, PAGE_SIZE);
       setQuestions(response.items);
-      setTotalQuestions(response.items.length);
+      setTotalQuestions(response.total);
+      setCurrentPage(response.page);
       setKnowledgeStats({
         accuracy: response.accuracy,
         correct_count: response.correct_count,
@@ -95,7 +99,43 @@ export default function DashboardPage() {
     } finally {
       setIsLoadingData(false);
     }
-  }, [searchKnowledge]);
+  }, []);
+
+  const handleFileUpload = useCallback(async () => {
+    setIsLoadingData(true);
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    setActiveKnowledge("");
+    setKnowledgeStats(null);
+    setSearchKnowledge("");
+    setStage("data");
+    await loadAnalysisData(1);
+  }, [loadAnalysisData]);
+
+  const handleKnowledgeSearch = useCallback(async () => {
+    if (!searchKnowledge.trim()) return;
+    setActiveKnowledge(searchKnowledge);
+    setCurrentPage(1);
+    await loadKnowledgeData(searchKnowledge, 1);
+  }, [searchKnowledge, loadKnowledgeData]);
+
+  // 分页切换
+  const handlePageChange = useCallback(async (newPage: number) => {
+    if (newPage < 1 || newPage > totalPages || newPage === currentPage) return;
+    
+    if (activeKnowledge) {
+      await loadKnowledgeData(activeKnowledge, newPage);
+    } else {
+      await loadAnalysisData(newPage);
+    }
+  }, [activeKnowledge, totalPages, currentPage, loadKnowledgeData, loadAnalysisData]);
+
+  // 清除知识点搜索，返回全部数据
+  const handleClearKnowledgeSearch = useCallback(async () => {
+    setActiveKnowledge("");
+    setSearchKnowledge("");
+    setKnowledgeStats(null);
+    await loadAnalysisData(1);
+  }, [loadAnalysisData]);
 
 
   const handleStartAnalysis = useCallback(async () => {
@@ -105,6 +145,7 @@ export default function DashboardPage() {
 
   const handleBackToData = useCallback(() => {
     resetStream();
+    setHasCompletedAnalysis(true);
     setStage("data");
   }, [resetStream]);
 
@@ -137,7 +178,13 @@ export default function DashboardPage() {
             size="icon"
             className="h-10 w-10"
             disabled={questions.length === 0}
-            onClick={() => setStage("data")}
+            onClick={() => {
+              // 如果从 agent 阶段切换到 data 阶段，标记分析已完成
+              if (stage === "agent") {
+                setHasCompletedAnalysis(true);
+              }
+              setStage("data");
+            }}
           >
             <Database className="h-5 w-5" />
           </Button>
@@ -234,7 +281,7 @@ export default function DashboardPage() {
                     Upload Student Data
                   </h3>
                   <p className="text-sm text-muted-foreground mb-4 text-center max-w-md">
-                    Upload an Excel file containing student answer records to begin the analysis.
+                    Upload an Excel file containing student answer records or just load from your history to begin the analysis.
                     The system will process and display the data.
                   </p>
                   <input
@@ -244,24 +291,36 @@ export default function DashboardPage() {
                     className="hidden"
                     onChange={handleFileUpload}
                   />
-                  <Button
+                  <div className="flex items-center gap-4">
+                    <Button
+                      size="lg"
+                      onClick={() => {
+                        fileInputRef.current?.click();
+                        // handleFileUpload();
+                      }}
+                      disabled={isLoadingData}
+                      className="gap-2"
+                    >
+                      {isLoadingData ? (
+                        <>Loading...</>
+                      ) : (
+                        <>
+                          <Upload className="h-4 w-4" />
+                          Select File
+                        </>
+                      )}
+                    </Button>
+                    <Button
                     size="lg"
-                    onClick={() => {
-                      fileInputRef.current?.click();
-                      handleFileUpload();
-                    }}
+                    variant="outline"
+                    onClick={handleFileUpload}
                     disabled={isLoadingData}
                     className="gap-2"
                   >
-                    {isLoadingData ? (
-                      <>Loading...</>
-                    ) : (
-                      <>
-                        <Upload className="h-4 w-4" />
-                        Select File
-                      </>
-                    )}
+                    <Database className="h-4 w-4" />
+                    Load from user history
                   </Button>
+                  </div>
                 </CardContent>
               </Card>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -288,26 +347,31 @@ export default function DashboardPage() {
           {stage === "data" && (
             <div className="space-y-6">
               {knowledgeStats && (
-                <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg">
-                  <Badge variant="outline" className="text-sm py-1 px-3">
-                    Knowledge: {searchKnowledge}
-                  </Badge>
-                  <Badge
-                    variant="outline"
-                    className={`text-sm py-1 px-3 ${
-                      knowledgeStats.accuracy && knowledgeStats.accuracy >= 0.6
-                        ? "bg-green-500/10 text-green-600"
-                        : "bg-red-500/10 text-red-600"
-                    }`}
-                  >
-                    Accuracy: {((knowledgeStats.accuracy || 0) * 100).toFixed(1)}%
-                  </Badge>
-                  <Badge variant="outline" className="text-sm py-1 px-3 bg-green-500/10 text-green-600">
-                    Correct: {knowledgeStats.correct_count}
-                  </Badge>
-                  <Badge variant="outline" className="text-sm py-1 px-3 bg-red-500/10 text-red-600">
-                    Wrong: {knowledgeStats.wrong_count}
-                  </Badge>
+                <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+                  <div className="flex items-center gap-4">
+                    <Badge variant="outline" className="text-sm py-1 px-3">
+                      Knowledge: {activeKnowledge}
+                    </Badge>
+                    <Badge
+                      variant="outline"
+                      className={`text-sm py-1 px-3 ${
+                        knowledgeStats.accuracy && knowledgeStats.accuracy >= 0.6
+                          ? "bg-green-500/10 text-green-600"
+                          : "bg-red-500/10 text-red-600"
+                      }`}
+                    >
+                      Accuracy: {((knowledgeStats.accuracy || 0) * 100).toFixed(1)}%
+                    </Badge>
+                    <Badge variant="outline" className="text-sm py-1 px-3 bg-green-500/10 text-green-600">
+                      Correct: {knowledgeStats.correct_count}
+                    </Badge>
+                    <Badge variant="outline" className="text-sm py-1 px-3 bg-red-500/10 text-red-600">
+                      Wrong: {knowledgeStats.wrong_count}
+                    </Badge>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={handleClearKnowledgeSearch}>
+                    Clear Filter
+                  </Button>
                 </div>
               )}
 
@@ -327,15 +391,71 @@ export default function DashboardPage() {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {questions.map((item) => (
-                    <QuestionCard key={item.ID} item={item} />
+                    <QuestionCard 
+                      key={item.ID} 
+                      item={item} 
+                      showJudgeExplanation={hasCompletedAnalysis}
+                    />
                   ))}
                 </div>
               )}
-              <div className="flex items-center justify-between text-sm text-muted-foreground">
-                <span>
-                  Showing {questions.length} of {totalQuestions} questions
+              {/* Pagination */}
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">
+                  Showing {(currentPage - 1) * PAGE_SIZE + 1}-{Math.min(currentPage * PAGE_SIZE, totalQuestions)} of {totalQuestions} questions
                 </span>
-                <span>Page {currentPage}</span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage <= 1 || isLoadingData}
+                    className="gap-1"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Previous
+                  </Button>
+                  <div className="flex items-center gap-1">
+                    {/* 显示页码按钮 */}
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNum: number;
+                      if (totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (currentPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i;
+                      } else {
+                        pageNum = currentPage - 2 + i;
+                      }
+                      return (
+                        <Button
+                          key={pageNum}
+                          variant={currentPage === pageNum ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => handlePageChange(pageNum)}
+                          disabled={isLoadingData}
+                          className="w-9"
+                        >
+                          {pageNum}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage >= totalPages || isLoadingData}
+                    className="gap-1"
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+                <span className="text-sm text-muted-foreground">
+                  Page {currentPage} of {totalPages}
+                </span>
               </div>
             </div>
           )}

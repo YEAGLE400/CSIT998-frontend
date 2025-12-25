@@ -205,7 +205,7 @@ export function useLangGraphStream(): UseLangGraphStreamReturn {
             config: {
               configurable: {
                 model_name: "kimi-k2-turbo-preview",
-                temperature: 0.1,
+                temperature: 0.05,
                 openai_base_url: "https://api.moonshot.cn/v1",
                 api_key: process.env.NEXT_PUBLIC_API_KEY || "",
               },

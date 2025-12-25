@@ -27,14 +27,14 @@ interface UserProfile {
 }
 
 const defaultProfile: UserProfile = {
-  name: "李明",
-  grade: "高二（理科班）",
-  currentScore: "数学 95/150，处于班级中下游",
-  learningAttitude: "非常端正，作业从不拖欠，笔记记得很满。",
-  cognitiveTraits: "形象思维尚可。抽象逻辑和代数运算较差，有一定畏难情绪",
-  historicalBackground: "高一上学期因病休学两个月，导致函数部分基础薄弱",
-  goal: "希望能考上一本",
-  teacherComment: "缺乏数感。",
+  name: "Zhang Wei",
+  grade: "Sophomore (Science Class)",
+  currentScore: "Math 105/150, stuck in a bottleneck",
+  learningAttitude: "Do a huge amount of practice problems, never refuse homework, and even actively look for questions to solve.",
+  cognitiveTraits: "Prefer Brute-force solving. The calculation process might be a bit messy.",
+  historicalBackground: "In junior high and the first semester of high school, I performed okay in the algebra basics section. After entering the sophomore solid geometry and analytic geometry chapters, due to the exponential increase in calculation volume, my brute force methodology seemed failed...",
+  goal: "Hope to get into a 985 university.",
+  teacherComment: "Theoretical knowledge reserves are fine, but the execution system is extremely fragile.",
 };
 
 const STORAGE_KEY = "aura-learning-user-profile";

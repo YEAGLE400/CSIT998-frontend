@@ -6,8 +6,8 @@ export async function fetchAnalysis(page = 1, size = 10) {
   return res.json();
 }
 
-export async function fetchKnowledgeStats(knowledge: string) {
-  const res = await fetch(`${API_BASE}/api/knowledge/stats?knowledge=${encodeURIComponent(knowledge)}`);
+export async function fetchKnowledgeStats(knowledge: string, page = 1, size = 10) {
+  const res = await fetch(`${API_BASE}/api/knowledge/stats?knowledge=${encodeURIComponent(knowledge)}&page=${page}&size=${size}`);
   if (!res.ok) throw new Error("Failed to fetch stats");
   return res.json();
 }

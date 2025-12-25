@@ -1,7 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import type { AnalysisItem } from "@/app/types/schema";
 import {
@@ -9,12 +16,17 @@ import {
   XCircle,
   BookOpen,
   GraduationCap,
-  AlertTriangle,
+  ChevronDown,
+  ChevronUp,
+  FileText,
+  PenLine,
+  AlertCircle,
 } from "lucide-react";
 
 interface QuestionCardProps {
   item: AnalysisItem;
   onClick?: () => void;
+  showJudgeExplanation?: boolean;
 }
 
 function getDifficultyColor(diff: string): string {
@@ -31,17 +43,20 @@ function getComplexityBadge(level: string): { label: string; color: string } {
   return { label: level, color: "bg-gray-500/10 text-gray-600" };
 }
 
-export function QuestionCard({ item, onClick }: QuestionCardProps) {
+export function QuestionCard({ item, onClick, showJudgeExplanation = false }: QuestionCardProps) {
   const isCorrect = item.Is_Correct === 1;
   const complexity = getComplexityBadge(item.Complexity_Level);
+  
+  const [isAnaLatexOpen, setIsAnaLatexOpen] = useState(false);
+  const [isStudentAnswerOpen, setIsStudentAnswerOpen] = useState(false);
+  const [isJudgeExplanationOpen, setIsJudgeExplanationOpen] = useState(false);
 
   return (
     <Card
       className={cn(
-        "border-border/50 hover:border-primary/50 transition-all cursor-pointer group",
+        "border-border/50 hover:border-primary/50 transition-all group",
         !isCorrect && "border-l-4 border-l-red-500"
       )}
-      onClick={onClick}
     >
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
@@ -65,7 +80,8 @@ export function QuestionCard({ item, onClick }: QuestionCardProps) {
       </CardHeader>
       <CardContent className="space-y-3">
         <div
-          className="text-sm text-foreground line-clamp-3 prose prose-sm max-w-none"
+          className="text-sm text-foreground line-clamp-3 prose prose-sm max-w-none cursor-pointer"
+          onClick={onClick}
           dangerouslySetInnerHTML={{
             __html: item.QueHTML.slice(0, 200) + (item.QueHTML.length > 200 ? "..." : ""),
           }}
@@ -101,22 +117,104 @@ export function QuestionCard({ item, onClick }: QuestionCardProps) {
           )}
         </div>
 
-        {!isCorrect && item.Error_Reason && (
-          <div className="flex items-start gap-2 p-2 bg-red-500/5 rounded-lg">
-            <AlertTriangle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
-            <div className="text-xs text-red-600">
-              <span className="font-medium">Error: </span>
-              {item.Error_Reason}
-            </div>
-          </div>
+        {/* 可展开的标准解析 AnaLatex */}
+        {item.AnaLatex && (
+          <Collapsible open={isAnaLatexOpen} onOpenChange={setIsAnaLatexOpen}>
+            <CollapsibleTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-between p-2 h-auto bg-blue-500/5 hover:bg-blue-500/10"
+              >
+                <div className="flex items-center gap-2 text-blue-600">
+                  <FileText className="h-4 w-4" />
+                  <span className="text-xs font-medium">Standard Solution</span>
+                </div>
+                {isAnaLatexOpen ? (
+                  <ChevronUp className="h-4 w-4 text-blue-600" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 text-blue-600" />
+                )}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-2">
+              <div className="p-3 bg-blue-500/5 rounded-lg border border-blue-500/20">
+                <div
+                  className="text-xs text-foreground prose prose-sm max-w-none overflow-auto max-h-48"
+                  dangerouslySetInnerHTML={{ __html: item.AnaLatex }}
+                />
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
         )}
+
+        {/* 可展开的学生原始回答 Student_Answer_Raw */}
+        {item.Student_Answer_Raw && (
+          <Collapsible open={isStudentAnswerOpen} onOpenChange={setIsStudentAnswerOpen}>
+            <CollapsibleTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-between p-2 h-auto bg-purple-500/5 hover:bg-purple-500/10"
+              >
+                <div className="flex items-center gap-2 text-purple-600">
+                  <PenLine className="h-4 w-4" />
+                  <span className="text-xs font-medium">Student Answer</span>
+                </div>
+                {isStudentAnswerOpen ? (
+                  <ChevronUp className="h-4 w-4 text-purple-600" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 text-purple-600" />
+                )}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-2">
+              <div className="p-3 bg-purple-500/5 rounded-lg border border-purple-500/20">
+                <div className="text-xs text-foreground whitespace-pre-wrap overflow-auto max-h-48">
+                  {item.Student_Answer_Raw}
+                </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        )}
+
+        {/* AI 分析后显示的 Judge_Explanation */}
+        {showJudgeExplanation && !isCorrect && item.Judge_Explanation && (
+          <Collapsible open={isJudgeExplanationOpen} onOpenChange={setIsJudgeExplanationOpen}>
+            <CollapsibleTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-between p-2 h-auto bg-red-500/5 hover:bg-red-500/10"
+              >
+                <div className="flex items-center gap-2 text-red-600">
+                  <AlertCircle className="h-4 w-4" />
+                  <span className="text-xs font-medium">AI Error Analysis</span>
+                </div>
+                {isJudgeExplanationOpen ? (
+                  <ChevronUp className="h-4 w-4 text-red-600" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 text-red-600" />
+                )}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-2">
+              <div className="p-3 bg-red-500/5 rounded-lg border border-red-500/20">
+                <div className="text-xs text-foreground whitespace-pre-wrap overflow-auto max-h-48">
+                  {item.Judge_Explanation}
+                </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        )}
+
         <div className="flex items-center justify-between pt-2 border-t border-border/50">
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
             <GraduationCap className="h-3 w-3" />
             {item.gradeName}
           </div>
           <span className="text-xs text-muted-foreground font-mono">
-            {item.ID.slice(0, 8)}...
+            {item.ID}...
           </span>
         </div>
       </CardContent>

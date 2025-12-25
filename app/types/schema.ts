@@ -23,6 +23,9 @@ export interface AnalysisResponse {
 }
 
 export interface KnowledgeStats {
+  total: number;
+  page: number;
+  page_size: number;
   items: AnalysisItem[];
   accuracy: number;
   correct_count: number;
