@@ -58,17 +58,6 @@ export default function PracticeRecordsPage() {
     }
   }, [])
 
-  const stats = {
-    totalPractices: records.length,
-    totalQuestions: records.reduce((sum, r) => sum + r.totalQuestions, 0),
-    totalCorrect: records.reduce((sum, r) => sum + r.correctAnswers, 0),
-    averageAccuracy:
-      records.length > 0
-        ? Math.round(records.reduce((sum, r) => sum + r.accuracy, 0) / records.length)
-        : 0,
-    totalTime: records.reduce((sum, r) => sum + r.timeSpent, 0),
-  }
-
   const handleNodeClick = (node: KnowledgeNode) => {
     setSelectedNode(node)
 
@@ -346,42 +335,6 @@ export default function PracticeRecordsPage() {
 
             {/* Practice Records Tab */}
             <TabsContent value="records" className="space-y-6 mt-6">
-              {/* Stats Overview */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <Card className="border-border/50 bg-card">
-                  <CardContent className="p-6">
-                    <div className="space-y-1">
-                      <p className="text-sm text-muted-foreground">Total Practices</p>
-                      <p className="text-3xl font-bold text-foreground">{stats.totalPractices}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="border-border/50 bg-card">
-                  <CardContent className="p-6">
-                    <div className="space-y-1">
-                      <p className="text-sm text-muted-foreground">Total Questions</p>
-                      <p className="text-3xl font-bold text-foreground">{stats.totalQuestions}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="border-border/50 bg-card">
-                  <CardContent className="p-6">
-                    <div className="space-y-1">
-                      <p className="text-sm text-muted-foreground">Average Accuracy</p>
-                      <p className="text-3xl font-bold text-foreground">{stats.averageAccuracy}%</p>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="border-border/50 bg-card">
-                  <CardContent className="p-6">
-                    <div className="space-y-1">
-                      <p className="text-sm text-muted-foreground">Total Time</p>
-                      <p className="text-3xl font-bold text-foreground">{formatTime(stats.totalTime)}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
               {/* Records List */}
               {records.length === 0 ? (
                 <Card className="border-border/50 bg-card">

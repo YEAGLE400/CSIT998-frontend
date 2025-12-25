@@ -241,20 +241,29 @@ export default function GeneratePracticePage() {
     setSelectedPoint(point)
     setGeneratingProgress(0)
 
+    // Step 1: Analyzing (2-3 seconds)
     setGeneratingStep("analyzing")
-    await new Promise((resolve) => setTimeout(resolve, 1200))
-    setGeneratingProgress(33)
+    await new Promise((resolve) => setTimeout(resolve, 2500))
+    setGeneratingProgress(25)
 
+    // Step 2: Identifying (2-3 seconds)
     setGeneratingStep("identifying")
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    setGeneratingProgress(66)
+    await new Promise((resolve) => setTimeout(resolve, 2800))
+    setGeneratingProgress(50)
 
+    // Step 3: Generating (3-4 seconds with progressive updates)
     setGeneratingStep("generating")
+    await new Promise((resolve) => setTimeout(resolve, 1500))
+    setGeneratingProgress(65)
+    await new Promise((resolve) => setTimeout(resolve, 1500))
+    setGeneratingProgress(80)
     await new Promise((resolve) => setTimeout(resolve, 1200))
+    setGeneratingProgress(95)
+    await new Promise((resolve) => setTimeout(resolve, 800))
     setGeneratingProgress(100)
 
     setGeneratingStep("done")
-    await new Promise((resolve) => setTimeout(resolve, 500))
+    await new Promise((resolve) => setTimeout(resolve, 600))
 
     const generatedQuestions = generateQuestions(point)
     setQuestions(generatedQuestions)
@@ -272,69 +281,42 @@ export default function GeneratePracticePage() {
   }
 
   const generateQuestions = (point: WeakKnowledgePoint): Question[] => {
-    const questionBank: Record<string, Question[]> = {
-      "1": [
-        {
-          id: "q1",
-          question: "Solve for x: 2x + 5 = 13",
-          type: "multiple-choice",
-          options: ["x = 3", "x = 4", "x = 5", "x = 6"],
-          correctAnswer: "x = 4",
-          explanation: "Subtract 5 from both sides: 2x = 8, then divide by 2: x = 4",
-          knowledgePoint: point.name,
-        },
-        {
-          id: "q2",
-          question: "If 3(x - 2) = 15, what is the value of x?",
-          type: "multiple-choice",
-          options: ["x = 5", "x = 7", "x = 9", "x = 11"],
-          correctAnswer: "x = 7",
-          explanation: "First expand: 3x - 6 = 15, add 6: 3x = 21, divide by 3: x = 7",
-          knowledgePoint: point.name,
-        },
-        {
-          id: "q3",
-          question: "Solve: (x + 4)/2 = 6",
-          type: "multiple-choice",
-          options: ["x = 6", "x = 8", "x = 10", "x = 12"],
-          correctAnswer: "x = 8",
-          explanation: "Multiply both sides by 2: x + 4 = 12, subtract 4: x = 8",
-          knowledgePoint: point.name,
-        },
-        {
-          id: "q4",
-          question: "What is the solution to 5x - 3 = 2x + 9?",
-          type: "multiple-choice",
-          options: ["x = 2", "x = 3", "x = 4", "x = 5"],
-          correctAnswer: "x = 4",
-          explanation: "Subtract 2x from both sides: 3x - 3 = 9, add 3: 3x = 12, divide by 3: x = 4",
-          knowledgePoint: point.name,
-        },
-        {
-          id: "q5",
-          question: "If 2(x + 3) - 4 = 10, find x",
-          type: "multiple-choice",
-          options: ["x = 3", "x = 4", "x = 5", "x = 6"],
-          correctAnswer: "x = 4",
-          explanation: "Expand: 2x + 6 - 4 = 10, simplify: 2x + 2 = 10, subtract 2: 2x = 8, divide by 2: x = 4",
-          knowledgePoint: point.name,
-        },
-      ],
+    // Try to find questions from data.json that match the knowledge point
+    const matchingQuestions = questionsData.filter((item: any) => {
+      const knowledge = item.question?.knowledge || []
+      return knowledge.some((k: string) =>
+        k.toLowerCase().includes(point.name.toLowerCase()) ||
+        point.name.toLowerCase().includes(k.toLowerCase())
+      )
+    })
+
+    // Shuffle and select random number of questions (5-10)
+    const randomCount = Math.floor(Math.random() * 6) + 5 // Random between 5-10
+    const shuffled = [...matchingQuestions].sort(() => Math.random() - 0.5)
+    const selectedQuestions = shuffled.slice(0, Math.min(randomCount, matchingQuestions.length))
+
+    // If we don't have enough matching questions, pull from entire data.json
+    if (selectedQuestions.length < randomCount) {
+      const allShuffled = [...questionsData].sort(() => Math.random() - 0.5)
+      const additionalNeeded = randomCount - selectedQuestions.length
+      const additionalQuestions = allShuffled.slice(0, additionalNeeded)
+      selectedQuestions.push(...additionalQuestions)
     }
 
-    const defaultQuestions: Question[] = [
-      {
-        id: "q1",
-        question: `What is a fundamental concept in ${point.name}?`,
-        type: "multiple-choice",
-        options: ["Option A", "Option B", "Option C", "Option D"],
-        correctAnswer: "Option A",
-        explanation: "This is a sample question.",
-        knowledgePoint: point.name,
-      },
-    ]
+    // Convert to internal format
+    const convertedQuestions: Question[] = selectedQuestions.map((item: any, index: number) => ({
+      id: `q${index + 1}`,
+      question: item.question.content,
+      type: item.question.type === 'single_choice' || item.question.type === 'multiple_choice' ? 'multiple-choice' : 'short-answer',
+      options: item.question.type === 'single_choice' || item.question.type === 'multiple_choice'
+        ? item.question.content.split('\n').filter((line: string) => /^[A-D]\./.test(line))
+        : undefined,
+      correctAnswer: typeof item.answer === 'string' ? item.answer : item.answer.join(', '),
+      explanation: item.analysis || 'No explanation available.',
+      knowledgePoint: point.name
+    }))
 
-    return questionBank[point.id] || defaultQuestions
+    return convertedQuestions
   }
 
   const handleSubmitAnswer = () => {
