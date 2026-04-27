@@ -13,7 +13,7 @@ type RawQuestionItem = {
   analysis?: string
 }
 
-export type PracticeAgentSource = "weak-point" | "question-bank" | "custom-modal"
+export type PracticeAgentSource = "weak-point" | "question-bank" | "custom-modal" | "knowledge-map"
 export type PracticeAgentStage = "plan" | "generate" | "review" | "done"
 export type PracticeAgentStageStatus = "pending" | "active" | "completed"
 export type PracticeDifficulty = "easy" | "medium" | "hard" | "mixed"
@@ -49,6 +49,13 @@ export interface PracticeAgentPlan {
   difficultyMix: PracticeAgentDifficultyBucket[]
   questionTypeMix: PracticeAgentQuestionTypeBucket[]
   strategy: string[]
+  evidence: Array<{
+    label: string
+    value: string
+    detail: string
+  }>
+  constraints: string[]
+  alternativeApproach: string
   reasoning: string
   summary: string
 }
@@ -63,10 +70,26 @@ export interface PracticeAgentReview {
   score: number
   passed: boolean
   summary: string
+  metrics: Array<{
+    label: string
+    value: string
+    detail: string
+  }>
   strengths: string[]
   concerns: string[]
   checks: PracticeAgentReviewCheck[]
   recommendedAction: string
+}
+
+export interface PracticeAgentGenerationReport {
+  poolStats: Array<{
+    label: string
+    count: number
+    detail: string
+  }>
+  selectionNotes: string[]
+  rejectedCandidates: number
+  diversityNotes: string[]
 }
 
 export interface PracticeAgentStageInfo {
@@ -89,6 +112,7 @@ export interface PracticeAgentRun {
   timeline: string[]
   plan?: PracticeAgentPlan
   generatedQuestions: Question[]
+  generationReport?: PracticeAgentGenerationReport
   review?: PracticeAgentReview
 }
 
@@ -106,12 +130,20 @@ const STAGE_BLUEPRINT: Array<Pick<PracticeAgentStageInfo, "key" | "title" | "des
   {
     key: "review",
     title: "Review Agent",
-    description: "Checking coverage, consistency, and session readiness",
+    description: "Checking fluency, difficulty, novelty, quantity, and repetition",
   },
 ]
 
 function shuffle<T>(items: T[]): T[] {
   return [...items].sort(() => Math.random() - 0.5)
+}
+
+function sampleOne<T>(items: T[]): T {
+  return items[Math.floor(Math.random() * items.length)]
+}
+
+function sampleMany<T>(items: T[], count: number): T[] {
+  return shuffle(items).slice(0, count)
 }
 
 function extractOptionLines(content: string) {
@@ -269,13 +301,73 @@ export function buildMockPlanFromKC(
     { type: "short-answer", count: 0 },
   ]
 
+  const planLens = sampleOne([
+    "weakness-first sequencing",
+    "difficulty calibration",
+    "knowledge-transfer reinforcement",
+    "confidence recovery",
+    "freshness and repetition control",
+  ])
+  const pacingStyle = sampleOne([
+    "start with one accessible anchor before raising complexity",
+    "alternate direct recall with applied reasoning",
+    "cluster similar prerequisites together, then switch contexts",
+    "mix familiar formats with one or two less predictable prompts",
+  ])
+  const distractorPolicy = sampleOne([
+    "keep distractors close enough to expose common misconceptions",
+    "avoid distractors that only test arithmetic slips",
+    "prefer options that separate concept errors from calculation errors",
+  ])
+
   const strategy = [
-    `Prioritize ${focusKnowledge} because it is the strongest weak-signal topic in this run.`,
+    `Prioritize ${focusKnowledge} through ${planLens}.`,
     relatedKnowledge.length > 0
       ? `Blend in ${relatedKnowledge.join(" and ")} to reinforce prerequisite and follow-up transfer.`
       : "Stay tightly scoped to the selected focus knowledge point to keep the session targeted.",
-    "Use objective questions only in the MVP so scoring stays reliable without backend grading.",
+    `Pacing rule: ${pacingStyle}.`,
+    `Distractor rule: ${distractorPolicy}.`,
+    "Use objective questions so the scoring flow stays reliable and immediate.",
   ]
+  const evidence = [
+    {
+      label: "Weakness signal",
+      value: `${config.sessionPoint.weaknessLevel}%`,
+      detail: `${config.sessionPoint.name} is currently the primary remediation target.`,
+    },
+    {
+      label: "Correct rate",
+      value: `${config.sessionPoint.correctRate}%`,
+      detail: sampleOne([
+        "The session should leave room for confidence-building questions.",
+        "The plan can tolerate moderate challenge without becoming too brittle.",
+        "The learner needs clear feedback loops on each misconception.",
+      ]),
+    },
+    {
+      label: "Practice history",
+      value: `${config.sessionPoint.questionsAnswered} answered`,
+      detail: sampleOne([
+        "Enough history exists to make a targeted session useful.",
+        "Recent practice volume supports a compact personalized set.",
+        "The planner should avoid overfitting to a single previous mistake.",
+      ]),
+    },
+  ]
+  const constraints = sampleMany([
+    "Keep every item auto-gradable.",
+    "Avoid repeating the same opening stem pattern.",
+    "Preserve the requested question count exactly.",
+    "Keep the selected difficulty as the main anchor.",
+    "Prefer coverage breadth when two candidates are equivalent.",
+    "Reserve fallback questions only for pool shortages.",
+  ], 4)
+  const alternativeApproach = sampleOne([
+    "A broader mixed-topic session was considered but rejected to keep remediation focused.",
+    "A harder challenge set was considered but rejected because the current weakness signal needs staged recovery.",
+    "A purely prerequisite session was considered but rejected because the selected KC still needs direct practice.",
+    "A random question-bank draw was considered but rejected because it would lose the KC rationale.",
+  ])
 
   return {
     focusKnowledge,
@@ -290,8 +382,11 @@ export function buildMockPlanFromKC(
     difficultyMix,
     questionTypeMix,
     strategy,
-    reasoning: `The learner shows a ${config.sessionPoint.weaknessLevel}% weakness signal on ${config.sessionPoint.name}, so the plan focuses on one core KC with a small amount of adjacent reinforcement.`,
-    summary: `Target ${config.quantity} questions centered on ${focusKnowledge}${relatedKnowledge.length ? ` with support from ${relatedKnowledge.join(", ")}` : ""}.`,
+    evidence,
+    constraints,
+    alternativeApproach,
+    reasoning: `The learner shows a ${config.sessionPoint.weaknessLevel}% weakness signal on ${config.sessionPoint.name}. The planner uses ${planLens} and ${pacingStyle} so the session can stay focused while still feeling varied.`,
+    summary: `Target ${config.quantity} ${config.difficulty} questions centered on ${focusKnowledge}${relatedKnowledge.length ? ` with support from ${relatedKnowledge.join(", ")}` : ""}.`,
   }
 }
 
@@ -356,6 +451,108 @@ export function buildMockGeneratedQuestions(
     .map((item, index) => toPracticeQuestion(item, index))
 }
 
+export function buildMockGenerationReport(
+  config: PracticeAgentConfig,
+  plan: PracticeAgentPlan,
+  questionsData: RawQuestionItem[],
+  generatedQuestions: Question[]
+): PracticeAgentGenerationReport {
+  const objectiveQuestions = questionsData.filter((item) =>
+    item.question.type === "single_choice" && extractOptionLines(item.question.content).length > 0
+  )
+  const focusPool = objectiveQuestions.filter((item) =>
+    (item.question.knowledge || []).includes(plan.focusKnowledge)
+  )
+  const relatedPool = objectiveQuestions.filter((item) =>
+    (item.question.knowledge || []).some((knowledge) => plan.relatedKnowledge.includes(knowledge))
+  )
+  const difficultyPool = objectiveQuestions.filter((item) => questionMatchesDifficulty(item, config.difficulty))
+  const representedKnowledge = new Set(
+    generatedQuestions.flatMap((question) =>
+      question.knowledgePoint.split(",").map((item) => item.trim()).filter(Boolean)
+    )
+  )
+  const uniquePromptStarts = new Set(
+    generatedQuestions.map((question) => question.question.trim().toLowerCase().slice(0, 36))
+  )
+
+  return {
+    poolStats: [
+      {
+        label: "Objective pool",
+        count: objectiveQuestions.length,
+        detail: "Auto-gradable questions available before personalization.",
+      },
+      {
+        label: "Focus KC pool",
+        count: focusPool.length,
+        detail: `Candidates directly tagged with ${plan.focusKnowledge}.`,
+      },
+      {
+        label: "Related KC pool",
+        count: relatedPool.length,
+        detail: "Candidates that reinforce adjacent knowledge points.",
+      },
+      {
+        label: "Difficulty match",
+        count: difficultyPool.length,
+        detail: `Candidates matching the requested ${config.difficulty} difficulty.`,
+      },
+    ],
+    selectionNotes: sampleMany([
+      "Ranked exact KC matches before adjacent reinforcement items.",
+      "Balanced direct concept checks with applied worded prompts.",
+      "Kept answer options intact so review can evaluate fluency reliably.",
+      "Used fallback candidates only after the target difficulty bucket was filled.",
+      "Preferred questions with distinct opening stems to improve freshness.",
+      "Preserved the requested quantity before applying the final review checks.",
+    ], 4),
+    rejectedCandidates: Math.max(0, focusPool.length + relatedPool.length + difficultyPool.length - generatedQuestions.length),
+    diversityNotes: [
+      `${representedKnowledge.size} knowledge signal${representedKnowledge.size === 1 ? "" : "s"} represented.`,
+      `${uniquePromptStarts.size}/${generatedQuestions.length} unique prompt openings.`,
+      sampleOne([
+        "The final set mixes short computation prompts with conceptual wording.",
+        "The final set keeps the same KC target while varying surface form.",
+        "The final set avoids placing near-identical stems back to back.",
+      ]),
+    ],
+  }
+}
+
+export function buildPlanTraceEvents(config: PracticeAgentConfig, plan: PracticeAgentPlan): string[] {
+  return [
+    `Read ${config.sessionPoint.name} profile: ${config.sessionPoint.weaknessLevel}% weakness, ${config.sessionPoint.correctRate}% correct rate.`,
+    `Selected planning lens: ${plan.strategy[0]}`,
+    `Checked constraints: ${plan.constraints.slice(0, 2).join("; ")}.`,
+    `Alternative considered: ${plan.alternativeApproach}`,
+  ]
+}
+
+export function buildGenerationTraceEvents(report: PracticeAgentGenerationReport): string[] {
+  const topPools = report.poolStats
+    .slice(0, 3)
+    .map((pool) => `${pool.label} ${pool.count}`)
+    .join(", ")
+
+  return [
+    `Scanned candidate pools: ${topPools}.`,
+    `Selection rule: ${report.selectionNotes[0]}`,
+    `Diversity pass: ${report.diversityNotes.slice(0, 2).join(" ")}`,
+    `Rejected ${report.rejectedCandidates} lower-fit candidates before finalizing the set.`,
+  ]
+}
+
+export function buildReviewTraceEvents(review: PracticeAgentReview): string[] {
+  return [
+    `Review metrics collected: ${review.metrics.map((metric) => `${metric.label} ${metric.value}`).join(", ")}.`,
+    `Passed checks: ${review.strengths.length}/${review.checks.length}.`,
+    review.concerns.length > 0
+      ? `Review concerns: ${review.concerns.slice(0, 2).join(" ")}`
+      : "Review concerns: none detected in the generated set.",
+  ]
+}
+
 export function buildMockReviewResult(
   config: PracticeAgentConfig,
   plan: PracticeAgentPlan,
@@ -363,6 +560,7 @@ export function buildMockReviewResult(
 ): PracticeAgentReview {
   const coveredKnowledge = new Set<string>()
   const normalizedQuestionTitles = new Set<string>()
+  const normalizedQuestionStarts = new Set<string>()
   let duplicateCount = 0
 
   questions.forEach((question) => {
@@ -377,30 +575,75 @@ export function buildMockReviewResult(
       duplicateCount += 1
     }
     normalizedQuestionTitles.add(normalizedTitle)
+    normalizedQuestionStarts.add(normalizedTitle.slice(0, 36))
   })
 
-  const focusCovered = coveredKnowledge.has(plan.focusKnowledge)
-  const relatedCovered = plan.relatedKnowledge.length === 0
-    ? true
-    : plan.relatedKnowledge.some((knowledge) => coveredKnowledge.has(knowledge))
+  const fluentQuestions = questions.filter((question) => {
+    const prompt = question.question.trim()
+    const hasReadableLength = prompt.length >= 12 && prompt.length <= 260
+    const hasOptionsWhenNeeded = question.type !== "multiple-choice" || Boolean(question.options?.length)
+    return hasReadableLength && hasOptionsWhenNeeded
+  }).length
+  const fluencyOk = questions.length > 0 && fluentQuestions === questions.length
+
+  const difficultyMixTotal = plan.difficultyMix.reduce((sum, bucket) => sum + bucket.count, 0)
+  const difficultyOk = difficultyMixTotal === config.quantity && plan.targetDifficulty === config.difficulty
+
+  const noveltyRatio = questions.length > 0 ? normalizedQuestionStarts.size / questions.length : 0
+  const knowledgeVariety = coveredKnowledge.size
+  const noveltyOk = noveltyRatio >= 0.8 && (questions.length <= 3 || knowledgeVariety >= 1)
+
   const quantityOk = questions.length === config.quantity
   const duplicateOk = duplicateCount === 0
-  const objectiveOnly = questions.every((question) => question.type === "multiple-choice")
+  const metrics = [
+    {
+      label: "Fluency",
+      value: `${fluentQuestions}/${questions.length}`,
+      detail: "Readable prompts with complete options.",
+    },
+    {
+      label: "Difficulty",
+      value: config.difficulty,
+      detail: `Planned buckets total ${difficultyMixTotal}.`,
+    },
+    {
+      label: "Novelty",
+      value: `${Math.round(noveltyRatio * 100)}%`,
+      detail: `${normalizedQuestionStarts.size} unique prompt openings detected.`,
+    },
+    {
+      label: "Quantity",
+      value: `${questions.length}/${config.quantity}`,
+      detail: "Final set size compared with the requested count.",
+    },
+    {
+      label: "Repetition",
+      value: `${duplicateCount} duplicates`,
+      detail: "Exact duplicate prompt screening.",
+    },
+  ]
 
   const checks: PracticeAgentReviewCheck[] = [
     {
-      label: "Focus KC coverage",
-      passed: focusCovered,
-      detail: focusCovered
-        ? `${plan.focusKnowledge} appears in the generated set.`
-        : `${plan.focusKnowledge} is missing from the final set.`,
+      label: "Question fluency",
+      passed: fluencyOk,
+      detail: fluencyOk
+        ? "All prompts are readable, scoped, and have the expected answer options."
+        : `${questions.length - fluentQuestions} prompt(s) need smoother wording or complete options.`,
     },
     {
-      label: "Related KC reinforcement",
-      passed: relatedCovered,
-      detail: relatedCovered
-        ? "At least one adjacent knowledge point is represented."
-        : "The set is too narrow and misses adjacent reinforcement.",
+      label: "Difficulty value",
+      passed: difficultyOk,
+      detail: difficultyOk
+        ? `Difficulty target is ${config.difficulty}, and the planned mix totals ${difficultyMixTotal} questions.`
+        : `Difficulty mix totals ${difficultyMixTotal}, expected ${config.quantity} for ${config.difficulty}.`,
+    },
+    {
+      label: "Novelty",
+      passed: noveltyOk,
+      detail: noveltyOk
+        ? "Question stems and knowledge signals are varied enough for a fresh session."
+        : "Question stems are too similar or the generated set lacks enough variety.",
     },
     {
       label: "Question count",
@@ -416,13 +659,6 @@ export function buildMockReviewResult(
         ? "No duplicate question prompts detected."
         : `${duplicateCount} duplicated prompts were detected.`,
     },
-    {
-      label: "MVP scoring safety",
-      passed: objectiveOnly,
-      detail: objectiveOnly
-        ? "All questions are objective, so client-side scoring is reliable."
-        : "Some subjective items require backend grading.",
-    },
   ]
 
   const passedChecks = checks.filter((check) => check.passed).length
@@ -433,8 +669,9 @@ export function buildMockReviewResult(
     score,
     passed,
     summary: passed
-      ? "The generated set is coherent enough for the MVP practice session."
-      : "The generated set needs operator review before launching practice.",
+      ? "The generated set passes the fluency, difficulty, novelty, quantity, and repetition review."
+      : "The generated set needs review because one or more quality checks did not pass.",
+    metrics,
     strengths: checks.filter((check) => check.passed).map((check) => check.label),
     concerns: checks.filter((check) => !check.passed).map((check) => check.detail),
     checks,

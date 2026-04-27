@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react"
 import Link from "next/link"
-import { ArrowLeft, Brain, Zap, CheckCircle2, XCircle, Clock, Award, TrendingDown, Sparkles, Home, ExternalLink, BookOpen, Filter, ShieldCheck, ClipboardList } from "lucide-react"
+import { ArrowLeft, Brain, Zap, CheckCircle2, XCircle, Clock, Award, TrendingDown, Sparkles, Home, ExternalLink, BookOpen, Filter, ShieldCheck, ClipboardList, History } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { practiceStorage } from "@/lib/practice-storage"
 import { WeakKnowledgePoint, Question, UserAnswer, PracticeRecord } from "@/types/practice"
 import { extractKnowledgePoints, generateKnowledgeGraph, getWeakestKnowledgePoints } from "@/lib/knowledge-graph"
@@ -20,10 +21,15 @@ import { QuestionGenerationModal, QuestionGenerationConfig } from "@/components/
 import { RichTextEditor } from "@/components/rich-text-editor"
 import { QuestionTimer } from "@/components/question-timer"
 import { PracticeAgentRunPanel } from "@/components/practice-agent-run-panel"
+import { PracticeAgentRetrospectivePanel } from "@/components/practice-agent-retrospective-panel"
 import {
   buildMockGeneratedQuestions,
+  buildMockGenerationReport,
   buildMockPlanFromKC,
   buildMockReviewResult,
+  buildGenerationTraceEvents,
+  buildPlanTraceEvents,
+  buildReviewTraceEvents,
   createInitialPracticeAgentRun,
   updatePracticeAgentRunStage,
   type PracticeAgentConfig,
@@ -45,6 +51,7 @@ export default function GeneratePracticePage() {
   const [startTime, setStartTime] = useState<Date | null>(null)
   const [questionStartTime, setQuestionStartTime] = useState<Date | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isRetrospectiveOpen, setIsRetrospectiveOpen] = useState(false)
   const [agentRun, setAgentRun] = useState<PracticeAgentRun | null>(null)
 
   // Knowledge graph for personalized practice (static/memoized - won't regenerate on re-renders)
@@ -125,10 +132,24 @@ export default function GeneratePracticePage() {
 
   useEffect(() => {
     // Check if we have generated questions from elsewhere
+    const pendingAgentConfig = localStorage.getItem('pendingPracticeAgentConfig')
     const storedQuestions = localStorage.getItem('generatedQuestions')
     const storedConfig = localStorage.getItem('questionConfig')
 
-    if (storedQuestions && storedConfig) {
+    if (pendingAgentConfig) {
+      try {
+        const parsedConfig = JSON.parse(pendingAgentConfig) as QuestionGenerationConfig
+        localStorage.removeItem('pendingPracticeAgentConfig')
+        localStorage.removeItem('generatedQuestions')
+        localStorage.removeItem('questionConfig')
+        void startPracticeAgent("knowledge-map", parsedConfig)
+      } catch (error) {
+        console.error('Failed to parse pending agent config:', error)
+        localStorage.removeItem('pendingPracticeAgentConfig')
+        const points = practiceStorage.getWeakPoints()
+        setWeakPoints(points.sort((a, b) => b.weaknessLevel - a.weaknessLevel))
+      }
+    } else if (storedQuestions && storedConfig) {
       try {
         const parsedQuestions = JSON.parse(storedQuestions)
         const parsedConfig = JSON.parse(storedConfig)
@@ -177,15 +198,20 @@ export default function GeneratePracticePage() {
   const personalizedPoints = weakPoints.length > 0 ? weakPoints : (weakestPoints as WeakKnowledgePoint[])
 
   const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+  const appendAgentTimeline = (run: PracticeAgentRun, event: string, progress?: number): PracticeAgentRun => ({
+    ...run,
+    progress: progress ?? run.progress,
+    timeline: [...run.timeline, event],
+  })
   const agentPacing = {
-    enter: 900,
-    planThinking: 1400,
-    planPause: 1100,
-    generateThinking: 1400,
-    generatePause: 1000,
-    reviewThinking: 1400,
-    retryPause: 1500,
-    launchPause: 1800,
+    enter: 500,
+    planThinking: 11000,
+    planPause: 3000,
+    generateThinking: 12000,
+    generatePause: 3000,
+    reviewThinking: 5000,
+    retryPause: 2000,
+    launchPause: 1000,
   }
 
   const buildSessionPoint = (
@@ -200,9 +226,9 @@ export default function GeneratePracticePage() {
     const graphPoint = knowledgeGraph.nodes.find((node) => node.id === knowledgePointNames[0] || node.name === knowledgePointNames[0])
 
     return {
-      id: source === "question-bank" ? "topic" : "personalized",
-      name: source === "custom-modal" ? knowledgePointNames.join(", ") : knowledgePointNames[0],
-      category: source === "question-bank" ? "Topic Practice" : "AI Generated",
+      id: source === "question-bank" ? "topic" : source === "knowledge-map" ? "knowledge-map" : "personalized",
+      name: source === "custom-modal" || source === "knowledge-map" ? knowledgePointNames.join(", ") : knowledgePointNames[0],
+      category: source === "question-bank" ? "Topic Practice" : source === "knowledge-map" ? "Knowledge Map" : "AI Generated",
       weaknessLevel: graphPoint?.weaknessLevel ?? 65,
       questionsAnswered: graphPoint?.questionsAnswered ?? 0,
       correctRate: graphPoint?.correctRate ?? 50,
@@ -264,15 +290,36 @@ export default function GeneratePracticePage() {
         : "Plan completed. Generate agent is assembling a question set."
     )
     setAgentRun(generatingRun)
-    await wait(agentPacing.generateThinking)
-
+    await wait(Math.floor(agentPacing.generateThinking / 3))
     const generatedQuestions = buildMockGeneratedQuestions(generatingRun.config, plan, questionsData)
+    const generationReport = buildMockGenerationReport(generatingRun.config, plan, questionsData, generatedQuestions)
+    const generationTraceEvents = buildGenerationTraceEvents(generationReport)
+    const tracedGeneratingRun = generationTraceEvents.slice(0, 2).reduce<PracticeAgentRun>(
+      (currentRun, event, index) => appendAgentTimeline(currentRun, event, retryCount > 0 ? 66 + index * 2 : 50 + index * 4),
+      generatingRun
+    )
+    setAgentRun({
+      ...tracedGeneratingRun,
+      generationReport,
+    })
+    await wait(Math.floor(agentPacing.generateThinking / 3))
+    const lateGeneratingRun = generationTraceEvents.slice(2).reduce<PracticeAgentRun>(
+      (currentRun, event, index) => appendAgentTimeline(currentRun, event, retryCount > 0 ? 70 + index : 58 + index * 3),
+      tracedGeneratingRun
+    )
+    setAgentRun({
+      ...lateGeneratingRun,
+      generationReport,
+    })
+    await wait(agentPacing.generateThinking - Math.floor(agentPacing.generateThinking / 3) * 2)
+
     const generatedRun: PracticeAgentRun = {
-      ...generatingRun,
+      ...lateGeneratingRun,
+      generationReport,
       generatedQuestions,
       progress: retryCount > 0 ? 72 : 65,
       timeline: [
-        ...generatingRun.timeline,
+        ...lateGeneratingRun.timeline,
         `Generate agent prepared ${generatedQuestions.length} objective questions for review.`,
       ],
     }
@@ -283,19 +330,33 @@ export default function GeneratePracticePage() {
       generatedRun,
       "review",
       retryCount > 0 ? 82 : 78,
-      "Review agent is checking coverage, duplicates, and MVP scoring safety."
+      "Review agent is checking fluency, difficulty value, novelty, quantity, and repetition."
     )
     setAgentRun(reviewingRun)
-    await wait(agentPacing.reviewThinking)
+    await wait(Math.floor(agentPacing.reviewThinking / 2))
 
     const review = buildMockReviewResult(reviewingRun.config, plan, generatedQuestions)
+    const reviewTraceEvents = buildReviewTraceEvents(review)
+    const tracedReviewingRun = reviewTraceEvents.slice(0, 2).reduce<PracticeAgentRun>(
+      (currentRun, event, index) => appendAgentTimeline(currentRun, event, retryCount > 0 ? 86 + index : 82 + index * 3),
+      {
+        ...reviewingRun,
+        review,
+      }
+    )
+    setAgentRun(tracedReviewingRun)
+    await wait(agentPacing.reviewThinking - Math.floor(agentPacing.reviewThinking / 2))
+    const finalReviewingRun = reviewTraceEvents.slice(2).reduce<PracticeAgentRun>(
+      (currentRun, event) => appendAgentTimeline(currentRun, event, retryCount > 0 ? 88 : 87),
+      tracedReviewingRun
+    )
     const reviewedRun: PracticeAgentRun = {
-      ...reviewingRun,
+      ...finalReviewingRun,
       review,
       generatedQuestions,
       progress: review.passed ? 96 : 88,
       timeline: [
-        ...reviewingRun.timeline,
+        ...finalReviewingRun.timeline,
         `Review score ${review.score}. ${review.recommendedAction}`,
       ],
     }
@@ -358,6 +419,7 @@ export default function GeneratePracticePage() {
     setSelectedPoint(sessionPoint)
     setViewMode("agent-run")
     setIsModalOpen(false)
+    setIsRetrospectiveOpen(false)
     await wait(agentPacing.enter)
 
     const planningRun = updatePracticeAgentRunStage(
@@ -367,15 +429,31 @@ export default function GeneratePracticePage() {
       "Plan agent is reading the KC snapshot and session constraints."
     )
     setAgentRun(planningRun)
-    await wait(agentPacing.planThinking)
-
     const plan = buildMockPlanFromKC(agentConfig, knowledgeGraph)
+    const planTraceEvents = buildPlanTraceEvents(agentConfig, plan)
+    await wait(Math.floor(agentPacing.planThinking / 3))
+    const earlyPlanningRun = planTraceEvents.slice(0, 2).reduce<PracticeAgentRun>(
+      (currentRun, event, index) => appendAgentTimeline(currentRun, event, 22 + index * 4),
+      planningRun
+    )
+    setAgentRun(earlyPlanningRun)
+    await wait(Math.floor(agentPacing.planThinking / 3))
+    const latePlanningRun = planTraceEvents.slice(2).reduce<PracticeAgentRun>(
+      (currentRun, event, index) => appendAgentTimeline(currentRun, event, 30 + index * 2),
+      {
+        ...earlyPlanningRun,
+        plan,
+      }
+    )
+    setAgentRun(latePlanningRun)
+    await wait(agentPacing.planThinking - Math.floor(agentPacing.planThinking / 3) * 2)
+
     const plannedRun: PracticeAgentRun = {
-      ...planningRun,
+      ...latePlanningRun,
       plan,
       progress: 34,
       timeline: [
-        ...planningRun.timeline,
+        ...latePlanningRun.timeline,
         `Plan ready. ${plan.summary}`,
       ],
     }
@@ -470,7 +548,7 @@ export default function GeneratePracticePage() {
 
     practiceStorage.savePracticeRecord(record)
 
-    if (selectedPoint.id !== 'custom' && selectedPoint.id !== 'topic' && selectedPoint.id !== 'personalized') {
+    if (selectedPoint.id !== 'custom' && selectedPoint.id !== 'topic' && selectedPoint.id !== 'personalized' && selectedPoint.id !== 'knowledge-map') {
       const newCorrectRate = ((selectedPoint.correctRate * selectedPoint.questionsAnswered + correctCount) /
         (selectedPoint.questionsAnswered + questions.length))
       const newWeaknessLevel = Math.max(0, 100 - newCorrectRate)
@@ -491,6 +569,7 @@ export default function GeneratePracticePage() {
     setCurrentQuestionIndex(0)
     setCurrentAnswer("")
     setAgentRun(null)
+    setIsRetrospectiveOpen(false)
     const points = practiceStorage.getWeakPoints()
     setWeakPoints(points.sort((a, b) => b.weaknessLevel - a.weaknessLevel))
   }
@@ -526,6 +605,17 @@ export default function GeneratePracticePage() {
                 {viewMode === "practice" && "Practice Session"}
                 {viewMode === "analysis" && "Session Analysis"}
               </h1>
+              {viewMode === "practice" && agentRun && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="ml-2 gap-2"
+                  onClick={() => setIsRetrospectiveOpen(true)}
+                >
+                  <History className="h-4 w-4" />
+                  Generation Process
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -957,6 +1047,22 @@ export default function GeneratePracticePage() {
           )}
         </div>
       </main>
+
+      {agentRun && (
+        <Sheet open={isRetrospectiveOpen} onOpenChange={setIsRetrospectiveOpen}>
+          <SheetContent className="w-full overflow-y-auto sm:max-w-3xl">
+            <SheetHeader>
+              <SheetTitle>Generation Process Review</SheetTitle>
+              <SheetDescription>
+                Click each agent stage to inspect the output that led to this practice session.
+              </SheetDescription>
+            </SheetHeader>
+            <div className="px-4 pb-6">
+              <PracticeAgentRetrospectivePanel run={agentRun} />
+            </div>
+          </SheetContent>
+        </Sheet>
+      )}
 
       {/* Question Generation Modal */}
       <QuestionGenerationModal

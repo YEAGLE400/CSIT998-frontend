@@ -1,0 +1,749 @@
+{
+  "exportedAt": "2026-04-27T05:51:31.046Z",
+  "origin": "http://localhost:3000",
+  "href": "http://localhost:3000/practice/generate",
+  "localStorage": {
+    "frontendStateSeedImported": "2026-04-27T05:50:22.348Z",
+    "practiceRecords": [
+      {
+        "id": "1777267653359",
+        "topic": "derivatives of polynomials, function evaluation, prime numbers, slope of a line",
+        "difficulty": "Medium",
+        "totalQuestions": 10,
+        "correctAnswers": 5,
+        "accuracy": 50,
+        "timeSpent": 1,
+        "date": "2026-04-27T05:27:33.359Z",
+        "questions": [
+          {
+            "id": "q1",
+            "question": "Which of the following are irrational numbers?",
+            "userAnswer": "B",
+            "correctAnswer": "A, C",
+            "isCorrect": false,
+            "explanation": "√2 and π cannot be expressed as fractions."
+          },
+          {
+            "id": "q2",
+            "question": "Which statements about triangles are correct?",
+            "userAnswer": "B",
+            "correctAnswer": "A, B, D",
+            "isCorrect": false,
+            "explanation": "C is false; only equilateral triangles have all sides equal."
+          },
+          {
+            "id": "q3",
+            "question": "If log₁₀x = 2, what is the value of x?",
+            "userAnswer": "C",
+            "correctAnswer": "C",
+            "isCorrect": true,
+            "explanation": "log₁₀x = 2 implies x = 10² = 100."
+          },
+          {
+            "id": "q4",
+            "question": "What is the mean of the data set {2,4,6,8}?",
+            "userAnswer": "B",
+            "correctAnswer": "B",
+            "isCorrect": true,
+            "explanation": "Mean = (2+4+6+8)/4 = 5."
+          },
+          {
+            "id": "q5",
+            "question": "If f(x)=2x+1, what is f(3)?",
+            "userAnswer": "C",
+            "correctAnswer": "C",
+            "isCorrect": true,
+            "explanation": "f(3)=2×3+1=7."
+          },
+          {
+            "id": "q6",
+            "question": "Which of the following functions are increasing on (0, +∞)?",
+            "userAnswer": "B",
+            "correctAnswer": "A, B, C",
+            "isCorrect": false,
+            "explanation": "x², eˣ, and ln x are increasing on (0, +∞); −x is decreasing."
+          },
+          {
+            "id": "q7",
+            "question": "Solve the equation 2x + 5 = 17.",
+            "userAnswer": "C",
+            "correctAnswer": "C",
+            "isCorrect": true,
+            "explanation": "2x = 12, so x = 6."
+          },
+          {
+            "id": "q8",
+            "question": "What is the solution set of the inequality x²−4x−5 < 0?",
+            "userAnswer": "C",
+            "correctAnswer": "B",
+            "isCorrect": false,
+            "explanation": "The roots are −1 and 5. The quadratic is negative between the roots."
+          },
+          {
+            "id": "q9",
+            "question": "Which of the following are multiples of 3?",
+            "userAnswer": "C",
+            "correctAnswer": "A, C",
+            "isCorrect": false,
+            "explanation": "6 = 3×2 and 15 = 3×5."
+          },
+          {
+            "id": "q10",
+            "question": "Which angle is a right angle?",
+            "userAnswer": "C",
+            "correctAnswer": "C",
+            "isCorrect": true,
+            "explanation": "A right angle measures exactly 90 degrees."
+          }
+        ]
+      },
+      {
+        "id": "1766670265222",
+        "topic": "prime numbers, geometric sequence",
+        "difficulty": "Medium",
+        "totalQuestions": 10,
+        "correctAnswers": 7,
+        "accuracy": "70",
+        "timeSpent": 1,
+        "date": "2025-12-25T13:44:25.222Z",
+        "questions": [
+          {
+            "id": "q1",
+            "question": "Solve the equation 2x + 5 = 17.\nA. 4\nB. 5\nC. 6\nD. 7",
+            "userAnswer": "C. 6",
+            "correctAnswer": "C",
+            "isCorrect": true,
+            "explanation": "2x = 12, so x = 6."
+          },
+          {
+            "id": "q2",
+            "question": "Find the derivative of the function f(x)=3x³−5x²+2x−7.",
+            "userAnswer": "范德萨",
+            "correctAnswer": "f'(x)=9x²−10x+2",
+            "isCorrect": false,
+            "explanation": "Differentiate term by term using the power rule."
+          },
+          {
+            "id": "q3",
+            "question": "Which of the following functions are increasing on (0, +∞)?\nA. f(x)=x²\nB. f(x)=eˣ\nC. f(x)=ln x\nD. f(x)=−x",
+            "userAnswer": "A, B, C",
+            "correctAnswer": "A, B, C",
+            "isCorrect": true,
+            "explanation": "x², eˣ, and ln x are increasing on (0, +∞); −x is decreasing."
+          },
+          {
+            "id": "q4",
+            "question": "Which fraction is equivalent to 1/2?\nA. 2/3\nB. 3/6\nC. 4/5\nD. 5/8",
+            "userAnswer": "B. 3/6",
+            "correctAnswer": "B",
+            "isCorrect": true,
+            "explanation": "3/6 simplifies to 1/2."
+          },
+          {
+            "id": "q5",
+            "question": "Find the solution to the equation x/4 = 5.",
+            "userAnswer": "FDSA",
+            "correctAnswer": "x = 20",
+            "isCorrect": false,
+            "explanation": "Multiply both sides by 4."
+          },
+          {
+            "id": "q6",
+            "question": "Which of the following are even numbers?\nA. 2\nB. 5\nC. 8\nD. 11",
+            "userAnswer": "A, C",
+            "correctAnswer": "A, C",
+            "isCorrect": true,
+            "explanation": "Even numbers are divisible by 2."
+          },
+          {
+            "id": "q7",
+            "question": "Solve the inequality x−3 > 2.",
+            "userAnswer": "x > 5",
+            "correctAnswer": "x > 5",
+            "isCorrect": true,
+            "explanation": "Add 3 to both sides."
+          },
+          {
+            "id": "q8",
+            "question": "Find the integral of f(x)=6x.",
+            "userAnswer": "FDSA",
+            "correctAnswer": "∫6x dx = 3x² + C",
+            "isCorrect": false,
+            "explanation": "Apply the power rule for integrals."
+          },
+          {
+            "id": "q9",
+            "question": "Which of the following are multiples of 3?\nA. 6\nB. 10\nC. 15\nD. 22",
+            "userAnswer": "A, C",
+            "correctAnswer": "A, C",
+            "isCorrect": true,
+            "explanation": "6 = 3×2 and 15 = 3×5."
+          },
+          {
+            "id": "q10",
+            "question": "Given a geometric sequence with first term 2 and common ratio 3, what is the sum of the first three terms?\nA. 18\nB. 20\nC. 26\nD. 28",
+            "userAnswer": "C. 26",
+            "correctAnswer": "C",
+            "isCorrect": true,
+            "explanation": "The sum is 2 + 6 + 18 = 26."
+          }
+        ]
+      },
+      {
+        "id": "1766670265222",
+        "topic": "prime numbers, geometric sequence",
+        "difficulty": "Medium",
+        "totalQuestions": 10,
+        "correctAnswers": 0,
+        "accuracy": "50",
+        "timeSpent": 1,
+        "date": "2025-12-25T13:44:25.222Z",
+        "questions": [
+          {
+            "id": "q1",
+            "question": "Solve the equation 2x + 5 = 17.\nA. 4\nB. 5\nC. 6\nD. 7",
+            "userAnswer": "B. 5",
+            "correctAnswer": "C",
+            "isCorrect": false,
+            "explanation": "2x = 12, so x = 6."
+          },
+          {
+            "id": "q2",
+            "question": "Find the derivative of the function f(x)=3x³−5x²+2x−7.",
+            "userAnswer": "范德萨",
+            "correctAnswer": "f'(x)=9x²−10x+2",
+            "isCorrect": false,
+            "explanation": "Differentiate term by term using the power rule."
+          },
+          {
+            "id": "q3",
+            "question": "Which of the following functions are increasing on (0, +∞)?\nA. f(x)=x²\nB. f(x)=eˣ\nC. f(x)=ln x\nD. f(x)=−x",
+            "userAnswer": "C. f(x)=ln x",
+            "correctAnswer": "A, B, C",
+            "isCorrect": false,
+            "explanation": "x², eˣ, and ln x are increasing on (0, +∞); −x is decreasing."
+          },
+          {
+            "id": "q4",
+            "question": "Which fraction is equivalent to 1/2?\nA. 2/3\nB. 3/6\nC. 4/5\nD. 5/8",
+            "userAnswer": "C. 4/5",
+            "correctAnswer": "B",
+            "isCorrect": false,
+            "explanation": "3/6 simplifies to 1/2."
+          },
+          {
+            "id": "q5",
+            "question": "Find the solution to the equation x/4 = 5.",
+            "userAnswer": "FDSA",
+            "correctAnswer": "x = 20",
+            "isCorrect": false,
+            "explanation": "Multiply both sides by 4."
+          },
+          {
+            "id": "q6",
+            "question": "Which of the following are even numbers?\nA. 2\nB. 5\nC. 8\nD. 11",
+            "userAnswer": "C. 8",
+            "correctAnswer": "A, C",
+            "isCorrect": false,
+            "explanation": "Even numbers are divisible by 2."
+          },
+          {
+            "id": "q7",
+            "question": "Solve the inequality x−3 > 2.",
+            "userAnswer": "FDSA",
+            "correctAnswer": "x > 5",
+            "isCorrect": false,
+            "explanation": "Add 3 to both sides."
+          },
+          {
+            "id": "q8",
+            "question": "Find the integral of f(x)=6x.",
+            "userAnswer": "FDSA",
+            "correctAnswer": "∫6x dx = 3x² + C",
+            "isCorrect": false,
+            "explanation": "Apply the power rule for integrals."
+          },
+          {
+            "id": "q9",
+            "question": "Which of the following are multiples of 3?\nA. 6\nB. 10\nC. 15\nD. 22",
+            "userAnswer": "C. 15",
+            "correctAnswer": "A, C",
+            "isCorrect": false,
+            "explanation": "6 = 3×2 and 15 = 3×5."
+          },
+          {
+            "id": "q10",
+            "question": "Given a geometric sequence with first term 2 and common ratio 3, what is the sum of the first three terms?\nA. 18\nB. 20\nC. 26\nD. 28",
+            "userAnswer": "C. 26",
+            "correctAnswer": "C",
+            "isCorrect": false,
+            "explanation": "The sum is 2 + 6 + 18 = 26."
+          }
+        ]
+      },
+      {
+        "id": "1766670265222",
+        "topic": "prime numbers, geometric sequence",
+        "difficulty": "Medium",
+        "totalQuestions": 10,
+        "correctAnswers": 0,
+        "accuracy": "30",
+        "timeSpent": 1,
+        "date": "2025-12-25T13:44:25.222Z",
+        "questions": [
+          {
+            "id": "q1",
+            "question": "Solve the equation 2x + 5 = 17.\nA. 4\nB. 5\nC. 6\nD. 7",
+            "userAnswer": "B. 5",
+            "correctAnswer": "C",
+            "isCorrect": false,
+            "explanation": "2x = 12, so x = 6."
+          },
+          {
+            "id": "q2",
+            "question": "Find the derivative of the function f(x)=3x³−5x²+2x−7.",
+            "userAnswer": "范德萨",
+            "correctAnswer": "f'(x)=9x²−10x+2",
+            "isCorrect": false,
+            "explanation": "Differentiate term by term using the power rule."
+          },
+          {
+            "id": "q3",
+            "question": "Which of the following functions are increasing on (0, +∞)?\nA. f(x)=x²\nB. f(x)=eˣ\nC. f(x)=ln x\nD. f(x)=−x",
+            "userAnswer": "C. f(x)=ln x",
+            "correctAnswer": "A, B, C",
+            "isCorrect": false,
+            "explanation": "x², eˣ, and ln x are increasing on (0, +∞); −x is decreasing."
+          },
+          {
+            "id": "q4",
+            "question": "Which fraction is equivalent to 1/2?\nA. 2/3\nB. 3/6\nC. 4/5\nD. 5/8",
+            "userAnswer": "C. 4/5",
+            "correctAnswer": "B",
+            "isCorrect": false,
+            "explanation": "3/6 simplifies to 1/2."
+          },
+          {
+            "id": "q5",
+            "question": "Find the solution to the equation x/4 = 5.",
+            "userAnswer": "FDSA",
+            "correctAnswer": "x = 20",
+            "isCorrect": false,
+            "explanation": "Multiply both sides by 4."
+          },
+          {
+            "id": "q6",
+            "question": "Which of the following are even numbers?\nA. 2\nB. 5\nC. 8\nD. 11",
+            "userAnswer": "C. 8",
+            "correctAnswer": "A, C",
+            "isCorrect": false,
+            "explanation": "Even numbers are divisible by 2."
+          },
+          {
+            "id": "q7",
+            "question": "Solve the inequality x−3 > 2.",
+            "userAnswer": "FDSA",
+            "correctAnswer": "x > 5",
+            "isCorrect": false,
+            "explanation": "Add 3 to both sides."
+          },
+          {
+            "id": "q8",
+            "question": "Find the integral of f(x)=6x.",
+            "userAnswer": "FDSA",
+            "correctAnswer": "∫6x dx = 3x² + C",
+            "isCorrect": false,
+            "explanation": "Apply the power rule for integrals."
+          },
+          {
+            "id": "q9",
+            "question": "Which of the following are multiples of 3?\nA. 6\nB. 10\nC. 15\nD. 22",
+            "userAnswer": "C. 15",
+            "correctAnswer": "A, C",
+            "isCorrect": false,
+            "explanation": "6 = 3×2 and 15 = 3×5."
+          },
+          {
+            "id": "q10",
+            "question": "Given a geometric sequence with first term 2 and common ratio 3, what is the sum of the first three terms?\nA. 18\nB. 20\nC. 26\nD. 28",
+            "userAnswer": "C. 26",
+            "correctAnswer": "C",
+            "isCorrect": false,
+            "explanation": "The sum is 2 + 6 + 18 = 26."
+          }
+        ]
+      },
+      {
+        "id": "1766670265222",
+        "topic": "prime numbers, geometric sequence",
+        "difficulty": "Medium",
+        "totalQuestions": 10,
+        "correctAnswers": 0,
+        "accuracy": 0,
+        "timeSpent": 1,
+        "date": "2025-12-25T13:44:25.222Z",
+        "questions": [
+          {
+            "id": "q1",
+            "question": "Solve the equation 2x + 5 = 17.\nA. 4\nB. 5\nC. 6\nD. 7",
+            "userAnswer": "B. 5",
+            "correctAnswer": "C",
+            "isCorrect": false,
+            "explanation": "2x = 12, so x = 6."
+          },
+          {
+            "id": "q2",
+            "question": "Find the derivative of the function f(x)=3x³−5x²+2x−7.",
+            "userAnswer": "范德萨",
+            "correctAnswer": "f'(x)=9x²−10x+2",
+            "isCorrect": false,
+            "explanation": "Differentiate term by term using the power rule."
+          },
+          {
+            "id": "q3",
+            "question": "Which of the following functions are increasing on (0, +∞)?\nA. f(x)=x²\nB. f(x)=eˣ\nC. f(x)=ln x\nD. f(x)=−x",
+            "userAnswer": "C. f(x)=ln x",
+            "correctAnswer": "A, B, C",
+            "isCorrect": false,
+            "explanation": "x², eˣ, and ln x are increasing on (0, +∞); −x is decreasing."
+          },
+          {
+            "id": "q4",
+            "question": "Which fraction is equivalent to 1/2?\nA. 2/3\nB. 3/6\nC. 4/5\nD. 5/8",
+            "userAnswer": "C. 4/5",
+            "correctAnswer": "B",
+            "isCorrect": false,
+            "explanation": "3/6 simplifies to 1/2."
+          },
+          {
+            "id": "q5",
+            "question": "Find the solution to the equation x/4 = 5.",
+            "userAnswer": "FDSA",
+            "correctAnswer": "x = 20",
+            "isCorrect": false,
+            "explanation": "Multiply both sides by 4."
+          },
+          {
+            "id": "q6",
+            "question": "Which of the following are even numbers?\nA. 2\nB. 5\nC. 8\nD. 11",
+            "userAnswer": "C. 8",
+            "correctAnswer": "A, C",
+            "isCorrect": false,
+            "explanation": "Even numbers are divisible by 2."
+          },
+          {
+            "id": "q7",
+            "question": "Solve the inequality x−3 > 2.",
+            "userAnswer": "FDSA",
+            "correctAnswer": "x > 5",
+            "isCorrect": false,
+            "explanation": "Add 3 to both sides."
+          },
+          {
+            "id": "q8",
+            "question": "Find the integral of f(x)=6x.",
+            "userAnswer": "FDSA",
+            "correctAnswer": "∫6x dx = 3x² + C",
+            "isCorrect": false,
+            "explanation": "Apply the power rule for integrals."
+          },
+          {
+            "id": "q9",
+            "question": "Which of the following are multiples of 3?\nA. 6\nB. 10\nC. 15\nD. 22",
+            "userAnswer": "C. 15",
+            "correctAnswer": "A, C",
+            "isCorrect": false,
+            "explanation": "6 = 3×2 and 15 = 3×5."
+          },
+          {
+            "id": "q10",
+            "question": "Given a geometric sequence with first term 2 and common ratio 3, what is the sum of the first three terms?\nA. 18\nB. 20\nC. 26\nD. 28",
+            "userAnswer": "C. 26",
+            "correctAnswer": "C",
+            "isCorrect": false,
+            "explanation": "The sum is 2 + 6 + 18 = 26."
+          }
+        ]
+      },
+      {
+        "id": "1766670265222",
+        "topic": "prime numbers, geometric sequence",
+        "difficulty": "Medium",
+        "totalQuestions": 10,
+        "correctAnswers": 0,
+        "accuracy": "60",
+        "timeSpent": 1,
+        "date": "2025-12-25T13:44:25.222Z",
+        "questions": [
+          {
+            "id": "q1",
+            "question": "Solve the equation 2x + 5 = 17.\nA. 4\nB. 5\nC. 6\nD. 7",
+            "userAnswer": "B. 5",
+            "correctAnswer": "C",
+            "isCorrect": false,
+            "explanation": "2x = 12, so x = 6."
+          },
+          {
+            "id": "q2",
+            "question": "Find the derivative of the function f(x)=3x³−5x²+2x−7.",
+            "userAnswer": "范德萨",
+            "correctAnswer": "f'(x)=9x²−10x+2",
+            "isCorrect": false,
+            "explanation": "Differentiate term by term using the power rule."
+          },
+          {
+            "id": "q3",
+            "question": "Which of the following functions are increasing on (0, +∞)?\nA. f(x)=x²\nB. f(x)=eˣ\nC. f(x)=ln x\nD. f(x)=−x",
+            "userAnswer": "C. f(x)=ln x",
+            "correctAnswer": "A, B, C",
+            "isCorrect": false,
+            "explanation": "x², eˣ, and ln x are increasing on (0, +∞); −x is decreasing."
+          },
+          {
+            "id": "q4",
+            "question": "Which fraction is equivalent to 1/2?\nA. 2/3\nB. 3/6\nC. 4/5\nD. 5/8",
+            "userAnswer": "C. 4/5",
+            "correctAnswer": "B",
+            "isCorrect": false,
+            "explanation": "3/6 simplifies to 1/2."
+          },
+          {
+            "id": "q5",
+            "question": "Find the solution to the equation x/4 = 5.",
+            "userAnswer": "FDSA",
+            "correctAnswer": "x = 20",
+            "isCorrect": false,
+            "explanation": "Multiply both sides by 4."
+          },
+          {
+            "id": "q6",
+            "question": "Which of the following are even numbers?\nA. 2\nB. 5\nC. 8\nD. 11",
+            "userAnswer": "C. 8",
+            "correctAnswer": "A, C",
+            "isCorrect": false,
+            "explanation": "Even numbers are divisible by 2."
+          },
+          {
+            "id": "q7",
+            "question": "Solve the inequality x−3 > 2.",
+            "userAnswer": "FDSA",
+            "correctAnswer": "x > 5",
+            "isCorrect": false,
+            "explanation": "Add 3 to both sides."
+          },
+          {
+            "id": "q8",
+            "question": "Find the integral of f(x)=6x.",
+            "userAnswer": "FDSA",
+            "correctAnswer": "∫6x dx = 3x² + C",
+            "isCorrect": false,
+            "explanation": "Apply the power rule for integrals."
+          },
+          {
+            "id": "q9",
+            "question": "Which of the following are multiples of 3?\nA. 6\nB. 10\nC. 15\nD. 22",
+            "userAnswer": "C. 15",
+            "correctAnswer": "A, C",
+            "isCorrect": false,
+            "explanation": "6 = 3×2 and 15 = 3×5."
+          },
+          {
+            "id": "q10",
+            "question": "Given a geometric sequence with first term 2 and common ratio 3, what is the sum of the first three terms?\nA. 18\nB. 20\nC. 26\nD. 28",
+            "userAnswer": "C. 26",
+            "correctAnswer": "C",
+            "isCorrect": false,
+            "explanation": "The sum is 2 + 6 + 18 = 26."
+          }
+        ]
+      },
+      {
+        "id": "1766670265222",
+        "topic": "prime numbers, geometric sequence",
+        "difficulty": "Medium",
+        "totalQuestions": 10,
+        "correctAnswers": 0,
+        "accuracy": 0,
+        "timeSpent": 1,
+        "date": "2025-12-25T13:44:25.222Z",
+        "questions": [
+          {
+            "id": "q1",
+            "question": "Solve the equation 2x + 5 = 17.\nA. 4\nB. 5\nC. 6\nD. 7",
+            "userAnswer": "B. 5",
+            "correctAnswer": "C",
+            "isCorrect": false,
+            "explanation": "2x = 12, so x = 6."
+          },
+          {
+            "id": "q2",
+            "question": "Find the derivative of the function f(x)=3x³−5x²+2x−7.",
+            "userAnswer": "范德萨",
+            "correctAnswer": "f'(x)=9x²−10x+2",
+            "isCorrect": false,
+            "explanation": "Differentiate term by term using the power rule."
+          },
+          {
+            "id": "q3",
+            "question": "Which of the following functions are increasing on (0, +∞)?\nA. f(x)=x²\nB. f(x)=eˣ\nC. f(x)=ln x\nD. f(x)=−x",
+            "userAnswer": "C. f(x)=ln x",
+            "correctAnswer": "A, B, C",
+            "isCorrect": false,
+            "explanation": "x², eˣ, and ln x are increasing on (0, +∞); −x is decreasing."
+          },
+          {
+            "id": "q4",
+            "question": "Which fraction is equivalent to 1/2?\nA. 2/3\nB. 3/6\nC. 4/5\nD. 5/8",
+            "userAnswer": "C. 4/5",
+            "correctAnswer": "B",
+            "isCorrect": false,
+            "explanation": "3/6 simplifies to 1/2."
+          },
+          {
+            "id": "q5",
+            "question": "Find the solution to the equation x/4 = 5.",
+            "userAnswer": "FDSA",
+            "correctAnswer": "x = 20",
+            "isCorrect": false,
+            "explanation": "Multiply both sides by 4."
+          },
+          {
+            "id": "q6",
+            "question": "Which of the following are even numbers?\nA. 2\nB. 5\nC. 8\nD. 11",
+            "userAnswer": "C. 8",
+            "correctAnswer": "A, C",
+            "isCorrect": false,
+            "explanation": "Even numbers are divisible by 2."
+          },
+          {
+            "id": "q7",
+            "question": "Solve the inequality x−3 > 2.",
+            "userAnswer": "FDSA",
+            "correctAnswer": "x > 5",
+            "isCorrect": false,
+            "explanation": "Add 3 to both sides."
+          },
+          {
+            "id": "q8",
+            "question": "Find the integral of f(x)=6x.",
+            "userAnswer": "FDSA",
+            "correctAnswer": "∫6x dx = 3x² + C",
+            "isCorrect": false,
+            "explanation": "Apply the power rule for integrals."
+          },
+          {
+            "id": "q9",
+            "question": "Which of the following are multiples of 3?\nA. 6\nB. 10\nC. 15\nD. 22",
+            "userAnswer": "C. 15",
+            "correctAnswer": "A, C",
+            "isCorrect": false,
+            "explanation": "6 = 3×2 and 15 = 3×5."
+          },
+          {
+            "id": "q10",
+            "question": "Given a geometric sequence with first term 2 and common ratio 3, what is the sum of the first three terms?\nA. 18\nB. 20\nC. 26\nD. 28",
+            "userAnswer": "C. 26",
+            "correctAnswer": "C",
+            "isCorrect": false,
+            "explanation": "The sum is 2 + 6 + 18 = 26."
+          }
+        ]
+      },
+      {
+        "id": "1766670265222",
+        "topic": "prime numbers, geometric sequence",
+        "difficulty": "Medium",
+        "totalQuestions": 10,
+        "correctAnswers": 0,
+        "accuracy": 0,
+        "timeSpent": 1,
+        "date": "2025-12-25T13:44:25.222Z",
+        "questions": [
+          {
+            "id": "q1",
+            "question": "Solve the equation 2x + 5 = 17.\nA. 4\nB. 5\nC. 6\nD. 7",
+            "userAnswer": "B. 5",
+            "correctAnswer": "C",
+            "isCorrect": false,
+            "explanation": "2x = 12, so x = 6."
+          },
+          {
+            "id": "q2",
+            "question": "Find the derivative of the function f(x)=3x³−5x²+2x−7.",
+            "userAnswer": "范德萨",
+            "correctAnswer": "f'(x)=9x²−10x+2",
+            "isCorrect": false,
+            "explanation": "Differentiate term by term using the power rule."
+          },
+          {
+            "id": "q3",
+            "question": "Which of the following functions are increasing on (0, +∞)?\nA. f(x)=x²\nB. f(x)=eˣ\nC. f(x)=ln x\nD. f(x)=−x",
+            "userAnswer": "C. f(x)=ln x",
+            "correctAnswer": "A, B, C",
+            "isCorrect": false,
+            "explanation": "x², eˣ, and ln x are increasing on (0, +∞); −x is decreasing."
+          },
+          {
+            "id": "q4",
+            "question": "Which fraction is equivalent to 1/2?\nA. 2/3\nB. 3/6\nC. 4/5\nD. 5/8",
+            "userAnswer": "C. 4/5",
+            "correctAnswer": "B",
+            "isCorrect": false,
+            "explanation": "3/6 simplifies to 1/2."
+          },
+          {
+            "id": "q5",
+            "question": "Find the solution to the equation x/4 = 5.",
+            "userAnswer": "FDSA",
+            "correctAnswer": "x = 20",
+            "isCorrect": false,
+            "explanation": "Multiply both sides by 4."
+          },
+          {
+            "id": "q6",
+            "question": "Which of the following are even numbers?\nA. 2\nB. 5\nC. 8\nD. 11",
+            "userAnswer": "C. 8",
+            "correctAnswer": "A, C",
+            "isCorrect": false,
+            "explanation": "Even numbers are divisible by 2."
+          },
+          {
+            "id": "q7",
+            "question": "Solve the inequality x−3 > 2.",
+            "userAnswer": "FDSA",
+            "correctAnswer": "x > 5",
+            "isCorrect": false,
+            "explanation": "Add 3 to both sides."
+          },
+          {
+            "id": "q8",
+            "question": "Find the integral of f(x)=6x.",
+            "userAnswer": "FDSA",
+            "correctAnswer": "∫6x dx = 3x² + C",
+            "isCorrect": false,
+            "explanation": "Apply the power rule for integrals."
+          },
+          {
+            "id": "q9",
+            "question": "Which of the following are multiples of 3?\nA. 6\nB. 10\nC. 15\nD. 22",
+            "userAnswer": "C. 15",
+            "correctAnswer": "A, C",
+            "isCorrect": false,
+            "explanation": "6 = 3×2 and 15 = 3×5."
+          },
+          {
+            "id": "q10",
+            "question": "Given a geometric sequence with first term 2 and common ratio 3, what is the sum of the first three terms?\nA. 18\nB. 20\nC. 26\nD. 28",
+            "userAnswer": "C. 26",
+            "correctAnswer": "C",
+            "isCorrect": false,
+            "explanation": "The sum is 2 + 6 + 18 = 26."
+          }
+        ]
+      }
+    ]
+  },
+  "sessionStorage": {},
+  "cookies": "__next_hmr_refresh_hash__=134",
+  "indexedDB": {}
+}

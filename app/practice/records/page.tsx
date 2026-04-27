@@ -75,18 +75,10 @@ export default function PracticeRecordsPage() {
   }
 
   const handleGenerateQuestions = (config: QuestionGenerationConfig) => {
-    // Directly pull requested quantity from data.json - ignore knowledge points (use static/dead data)
-    // Shuffle all questions first
-    const shuffled = [...questionsData].sort(() => Math.random() - 0.5)
+    localStorage.removeItem('generatedQuestions')
+    localStorage.removeItem('questionConfig')
+    localStorage.setItem('pendingPracticeAgentConfig', JSON.stringify(config))
 
-    // Take exactly the requested quantity (no filtering by knowledge points or difficulty)
-    const selectedQuestions = shuffled.slice(0, config.quantity)
-
-    // Store the selected questions and configuration
-    localStorage.setItem('generatedQuestions', JSON.stringify(selectedQuestions))
-    localStorage.setItem('questionConfig', JSON.stringify(config))
-
-    // Navigate to practice page
     router.push('/practice/generate')
   }
 

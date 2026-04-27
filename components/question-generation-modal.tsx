@@ -95,7 +95,7 @@ export function QuestionGenerationModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-hidden flex flex-col gap-6 py-4">
+        <div className="min-h-0 flex-1 overflow-y-auto pr-2 flex flex-col gap-6 py-4">
           {/* Knowledge Points Selection */}
           <div className="space-y-3">
             <div className="flex items-center gap-2">
@@ -199,7 +199,7 @@ export function QuestionGenerationModal({
         </div>
 
         {/* Footer Actions */}
-        <div className="flex justify-end gap-3 pt-4 border-t">
+        <div className="shrink-0 flex justify-end gap-3 pt-4 border-t">
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
