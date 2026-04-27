@@ -5,6 +5,8 @@
   "scripts": {
     "build": "next build",
     "dev": "next dev",
+    "dev:speak": "node scripts/dev-with-speak.mjs",
+    "dev:speak-backend": "node scripts/start-speak-backend.mjs",
     "lint": "eslint .",
     "start": "next start"
   },

@@ -51,6 +51,26 @@ pnpm dev
 
 开发服务器将在 [http://localhost:3000](http://localhost:3000) 启动。
 
+### 启动 Speak 语音模块
+
+普通前端开发仍然使用 `npm run dev`。如果需要运行 `/speak` 的本地 AI 口语助手，需要同时启动 Next.js 前端和 Speak 后端：
+
+```bash
+npm run dev:speak
+```
+
+Speak 后端使用 `speak-backend/` 内的 Python 本地模型服务，首次启动会下载 Gemma 和 Kokoro 模型。运行前需要安装 `uv`：
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+如果只想单独启动 Speak 后端：
+
+```bash
+npm run dev:speak-backend
+```
+
 ## 功能页面说明
 
 ### 1. 登录/注册页面
