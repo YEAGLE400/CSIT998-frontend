@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { ArrowLeft, Brain, Zap, CheckCircle2, XCircle, Clock, Award, TrendingDown, Sparkles, Loader2, Home, ExternalLink, BookOpen, Filter } from "lucide-react"
+import { ArrowLeft, Brain, Zap, CheckCircle2, XCircle, Clock, Award, TrendingDown, Sparkles, Home, ExternalLink, BookOpen, Filter, ShieldCheck, ClipboardList } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -20,13 +19,22 @@ import { extractKnowledgePoints, generateKnowledgeGraph, getWeakestKnowledgePoin
 import { QuestionGenerationModal, QuestionGenerationConfig } from "@/components/question-generation-modal"
 import { RichTextEditor } from "@/components/rich-text-editor"
 import { QuestionTimer } from "@/components/question-timer"
+import { PracticeAgentRunPanel } from "@/components/practice-agent-run-panel"
+import {
+  buildMockGeneratedQuestions,
+  buildMockPlanFromKC,
+  buildMockReviewResult,
+  createInitialPracticeAgentRun,
+  updatePracticeAgentRunStage,
+  type PracticeAgentConfig,
+  type PracticeAgentRun,
+  type PracticeAgentSource,
+} from "@/lib/practice-agent-mock"
 import questionsData from "@/data/data.json"
 
-type ViewMode = "selection" | "practice" | "analysis"
-type GeneratingStep = "analyzing" | "identifying" | "generating" | "done"
+type ViewMode = "selection" | "agent-run" | "practice" | "analysis"
 
 export default function GeneratePracticePage() {
-  const router = useRouter()
   const [viewMode, setViewMode] = useState<ViewMode>("selection")
   const [weakPoints, setWeakPoints] = useState<WeakKnowledgePoint[]>([])
   const [selectedPoint, setSelectedPoint] = useState<WeakKnowledgePoint | null>(null)
@@ -36,10 +44,8 @@ export default function GeneratePracticePage() {
   const [currentAnswer, setCurrentAnswer] = useState("")
   const [startTime, setStartTime] = useState<Date | null>(null)
   const [questionStartTime, setQuestionStartTime] = useState<Date | null>(null)
-  const [isGenerating, setIsGenerating] = useState(false)
-  const [generatingStep, setGeneratingStep] = useState<GeneratingStep>("analyzing")
-  const [generatingProgress, setGeneratingProgress] = useState(0)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [agentRun, setAgentRun] = useState<PracticeAgentRun | null>(null)
 
   // Knowledge graph for personalized practice (static/memoized - won't regenerate on re-renders)
   const knowledgeGraph = useMemo(() => generateKnowledgeGraph(questionsData), [])
@@ -130,7 +136,7 @@ export default function GeneratePracticePage() {
         // Convert questions to internal format
         const convertedQuestions: Question[] = parsedQuestions.map((item: any, index: number) => ({
           id: `q${index + 1}`,
-          question: item.question.content,
+          question: item.question.content.split('\nA.')[0].trim(),
           type: item.question.type === 'single_choice' || item.question.type === 'multiple_choice' ? 'multiple-choice' : 'short-answer',
           options: item.question.type === 'single_choice' || item.question.type === 'multiple_choice'
             ? item.question.content.split('\n').filter((line: string) => /^[A-D]\./.test(line))
@@ -168,155 +174,242 @@ export default function GeneratePracticePage() {
     }
   }, [])
 
-  const handleKnowledgePointClick = (knowledgePoint: string) => {
-    const pointQuestions = questionsByKnowledge.get(knowledgePoint) || []
-    const shuffled = [...pointQuestions].sort(() => Math.random() - 0.5)
+  const personalizedPoints = weakPoints.length > 0 ? weakPoints : (weakestPoints as WeakKnowledgePoint[])
 
-    // Convert to internal format
-    const convertedQuestions: Question[] = shuffled.map((item: any, index: number) => ({
-      id: `q${index + 1}`,
-      question: item.question.content,
-      type: item.question.type === 'single_choice' || item.question.type === 'multiple_choice' ? 'multiple-choice' : 'short-answer',
-      options: item.question.type === 'single_choice' || item.question.type === 'multiple_choice'
-        ? item.question.content.split('\n').filter((line: string) => /^[A-D]\./.test(line))
-        : undefined,
-      correctAnswer: typeof item.answer === 'string' ? item.answer : item.answer.join(', '),
-      explanation: item.analysis || 'No explanation available.',
-      knowledgePoint: knowledgePoint
-    }))
-
-    const virtualPoint: WeakKnowledgePoint = {
-      id: 'topic',
-      name: knowledgePoint,
-      category: 'Topic Practice',
-      weaknessLevel: 50,
-      questionsAnswered: 0,
-      correctRate: 50
-    }
-
-    setQuestions(convertedQuestions)
-    setSelectedPoint(virtualPoint)
-    setViewMode("practice")
-    setStartTime(new Date())
-    setQuestionStartTime(new Date())
+  const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+  const agentPacing = {
+    enter: 900,
+    planThinking: 1400,
+    planPause: 1100,
+    generateThinking: 1400,
+    generatePause: 1000,
+    reviewThinking: 1400,
+    retryPause: 1500,
+    launchPause: 1800,
   }
 
-  const handleGenerateQuestions = (config: QuestionGenerationConfig) => {
-    // Directly pull requested quantity from data.json - ignore knowledge points and difficulty (use static/dead data)
-    const shuffled = [...questionsData].sort(() => Math.random() - 0.5)
-    const selectedQuestions = shuffled.slice(0, config.quantity)
-
-    // Convert to internal format
-    const convertedQuestions: Question[] = selectedQuestions.map((item: any, index: number) => ({
-      id: `q${index + 1}`,
-      question: item.question.content,
-      type: item.question.type === 'single_choice' || item.question.type === 'multiple_choice' ? 'multiple-choice' : 'short-answer',
-      options: item.question.type === 'single_choice' || item.question.type === 'multiple_choice'
-        ? item.question.content.split('\n').filter((line: string) => /^[A-D]\./.test(line))
-        : undefined,
-      correctAnswer: typeof item.answer === 'string' ? item.answer : item.answer.join(', '),
-      explanation: item.analysis || 'No explanation available.',
-      knowledgePoint: config.knowledgePoints.join(', ')
-    }))
-
-    const virtualPoint: WeakKnowledgePoint = {
-      id: 'personalized',
-      name: 'Personalized Practice',
-      category: 'AI Generated',
-      weaknessLevel: 70,
-      questionsAnswered: 0,
-      correctRate: 50
+  const buildSessionPoint = (
+    source: PracticeAgentSource,
+    knowledgePointNames: string[],
+    point?: WeakKnowledgePoint
+  ): WeakKnowledgePoint => {
+    if (point) {
+      return point
     }
 
-    setQuestions(convertedQuestions)
-    setSelectedPoint(virtualPoint)
-    setViewMode("practice")
-    setStartTime(new Date())
-    setQuestionStartTime(new Date())
-    setIsModalOpen(false)
+    const graphPoint = knowledgeGraph.nodes.find((node) => node.id === knowledgePointNames[0] || node.name === knowledgePointNames[0])
+
+    return {
+      id: source === "question-bank" ? "topic" : "personalized",
+      name: source === "custom-modal" ? knowledgePointNames.join(", ") : knowledgePointNames[0],
+      category: source === "question-bank" ? "Topic Practice" : "AI Generated",
+      weaknessLevel: graphPoint?.weaknessLevel ?? 65,
+      questionsAnswered: graphPoint?.questionsAnswered ?? 0,
+      correctRate: graphPoint?.correctRate ?? 50,
+    }
   }
 
-  const simulateGeneration = async (point: WeakKnowledgePoint) => {
-    setIsGenerating(true)
-    setSelectedPoint(point)
-    setGeneratingProgress(0)
-
-    // Step 1: Analyzing (2-3 seconds)
-    setGeneratingStep("analyzing")
-    await new Promise((resolve) => setTimeout(resolve, 2500))
-    setGeneratingProgress(25)
-
-    // Step 2: Identifying (2-3 seconds)
-    setGeneratingStep("identifying")
-    await new Promise((resolve) => setTimeout(resolve, 2800))
-    setGeneratingProgress(50)
-
-    // Step 3: Generating (3-4 seconds with progressive updates)
-    setGeneratingStep("generating")
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-    setGeneratingProgress(65)
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-    setGeneratingProgress(80)
-    await new Promise((resolve) => setTimeout(resolve, 1200))
-    setGeneratingProgress(95)
-    await new Promise((resolve) => setTimeout(resolve, 800))
-    setGeneratingProgress(100)
-
-    setGeneratingStep("done")
-    await new Promise((resolve) => setTimeout(resolve, 600))
-
-    const generatedQuestions = generateQuestions(point)
-    setQuestions(generatedQuestions)
+  const launchPracticeSession = (run: PracticeAgentRun, nextQuestions?: Question[]) => {
+    const sessionQuestions = nextQuestions ?? run.generatedQuestions
+    setQuestions(sessionQuestions)
+    setSelectedPoint(run.config.sessionPoint)
     setViewMode("practice")
     setStartTime(new Date())
     setQuestionStartTime(new Date())
     setUserAnswers([])
     setCurrentQuestionIndex(0)
     setCurrentAnswer("")
-    setIsGenerating(false)
+  }
+
+  const hydrateAnswerForQuestion = (question: Question | undefined, savedAnswer?: string) => {
+    if (!question || !savedAnswer) return ""
+
+    if (question.type === "multiple-choice" && question.options) {
+      return question.options.find((option) => option.startsWith(savedAnswer)) || savedAnswer
+    }
+
+    return savedAnswer
+  }
+
+  const finalizeAgentRun = (
+    run: PracticeAgentRun,
+    review = run.review,
+    canUseCurrentSet = false
+  ): PracticeAgentRun => ({
+    ...run,
+    currentStage: "done",
+    progress: 100,
+    status: "completed",
+    canUseCurrentSet,
+    review,
+    stages: run.stages.map((stage) => ({ ...stage, status: "completed" })),
+  })
+
+  const runGenerateAndReview = async (
+    run: PracticeAgentRun,
+    plan = run.plan,
+    retryCount = run.retryCount
+  ) => {
+    if (!plan) return
+
+    const generatingRun = updatePracticeAgentRunStage(
+      {
+        ...run,
+        retryCount,
+      },
+      "generate",
+      retryCount > 0 ? 62 : 45,
+      retryCount > 0
+        ? "Retrying generation with a broader fallback pool."
+        : "Plan completed. Generate agent is assembling a question set."
+    )
+    setAgentRun(generatingRun)
+    await wait(agentPacing.generateThinking)
+
+    const generatedQuestions = buildMockGeneratedQuestions(generatingRun.config, plan, questionsData)
+    const generatedRun: PracticeAgentRun = {
+      ...generatingRun,
+      generatedQuestions,
+      progress: retryCount > 0 ? 72 : 65,
+      timeline: [
+        ...generatingRun.timeline,
+        `Generate agent prepared ${generatedQuestions.length} objective questions for review.`,
+      ],
+    }
+    setAgentRun(generatedRun)
+    await wait(agentPacing.generatePause)
+
+    const reviewingRun = updatePracticeAgentRunStage(
+      generatedRun,
+      "review",
+      retryCount > 0 ? 82 : 78,
+      "Review agent is checking coverage, duplicates, and MVP scoring safety."
+    )
+    setAgentRun(reviewingRun)
+    await wait(agentPacing.reviewThinking)
+
+    const review = buildMockReviewResult(reviewingRun.config, plan, generatedQuestions)
+    const reviewedRun: PracticeAgentRun = {
+      ...reviewingRun,
+      review,
+      generatedQuestions,
+      progress: review.passed ? 96 : 88,
+      timeline: [
+        ...reviewingRun.timeline,
+        `Review score ${review.score}. ${review.recommendedAction}`,
+      ],
+    }
+    setAgentRun(reviewedRun)
+
+    if (!review.passed && retryCount < 1) {
+      await wait(agentPacing.retryPause)
+      return runGenerateAndReview(
+        {
+          ...reviewedRun,
+          retryCount: 1,
+          timeline: [
+            ...reviewedRun.timeline,
+            "First review did not pass. One automatic retry is now running.",
+          ],
+        },
+        plan,
+        1
+      )
+    }
+
+    const completedRun = finalizeAgentRun(
+      {
+        ...reviewedRun,
+        retryCount,
+        timeline: [
+          ...reviewedRun.timeline,
+          review.passed
+            ? "Review passed. Launching practice session."
+            : "Review still found risks. Waiting for your decision.",
+        ],
+      },
+      review,
+      !review.passed
+    )
+    setAgentRun(completedRun)
+
+    if (review.passed) {
+      await wait(agentPacing.launchPause)
+      launchPracticeSession(completedRun, generatedQuestions)
+    }
+  }
+
+  const startPracticeAgent = async (
+    source: PracticeAgentSource,
+    config: QuestionGenerationConfig,
+    point?: WeakKnowledgePoint
+  ) => {
+    const sessionPoint = buildSessionPoint(source, config.knowledgePoints, point)
+    const agentConfig: PracticeAgentConfig = {
+      source,
+      knowledgePoints: config.knowledgePoints,
+      difficulty: config.difficulty,
+      quantity: config.quantity,
+      sessionPoint,
+    }
+
+    const initialRun = createInitialPracticeAgentRun(agentConfig)
+    setAgentRun(initialRun)
+    setSelectedPoint(sessionPoint)
+    setViewMode("agent-run")
+    setIsModalOpen(false)
+    await wait(agentPacing.enter)
+
+    const planningRun = updatePracticeAgentRunStage(
+      initialRun,
+      "plan",
+      18,
+      "Plan agent is reading the KC snapshot and session constraints."
+    )
+    setAgentRun(planningRun)
+    await wait(agentPacing.planThinking)
+
+    const plan = buildMockPlanFromKC(agentConfig, knowledgeGraph)
+    const plannedRun: PracticeAgentRun = {
+      ...planningRun,
+      plan,
+      progress: 34,
+      timeline: [
+        ...planningRun.timeline,
+        `Plan ready. ${plan.summary}`,
+      ],
+    }
+    setAgentRun(plannedRun)
+    await wait(agentPacing.planPause)
+
+    await runGenerateAndReview(plannedRun, plan, 0)
+  }
+
+  const handleKnowledgePointClick = (knowledgePoint: string) => {
+    const pointQuestions = questionsByKnowledge.get(knowledgePoint) || []
+    const quantity = Math.min(8, Math.max(5, pointQuestions.length || 5))
+
+    void startPracticeAgent("question-bank", {
+      knowledgePoints: [knowledgePoint],
+      difficulty: "mixed",
+      quantity,
+    })
+  }
+
+  const handleGenerateQuestions = (config: QuestionGenerationConfig) => {
+    void startPracticeAgent("custom-modal", config)
   }
 
   const handleSelectKnowledgePoint = (point: WeakKnowledgePoint) => {
-    simulateGeneration(point)
-  }
-
-  const generateQuestions = (point: WeakKnowledgePoint): Question[] => {
-    // Try to find questions from data.json that match the knowledge point
-    const matchingQuestions = questionsData.filter((item: any) => {
-      const knowledge = item.question?.knowledge || []
-      return knowledge.some((k: string) =>
-        k.toLowerCase().includes(point.name.toLowerCase()) ||
-        point.name.toLowerCase().includes(k.toLowerCase())
-      )
-    })
-
-    // Shuffle and select random number of questions (5-10)
-    const randomCount = Math.floor(Math.random() * 6) + 5 // Random between 5-10
-    const shuffled = [...matchingQuestions].sort(() => Math.random() - 0.5)
-    const selectedQuestions = shuffled.slice(0, Math.min(randomCount, matchingQuestions.length))
-
-    // If we don't have enough matching questions, pull from entire data.json
-    if (selectedQuestions.length < randomCount) {
-      const allShuffled = [...questionsData].sort(() => Math.random() - 0.5)
-      const additionalNeeded = randomCount - selectedQuestions.length
-      const additionalQuestions = allShuffled.slice(0, additionalNeeded)
-      selectedQuestions.push(...additionalQuestions)
-    }
-
-    // Convert to internal format
-    const convertedQuestions: Question[] = selectedQuestions.map((item: any, index: number) => ({
-      id: `q${index + 1}`,
-      question: item.question.content,
-      type: item.question.type === 'single_choice' || item.question.type === 'multiple_choice' ? 'multiple-choice' : 'short-answer',
-      options: item.question.type === 'single_choice' || item.question.type === 'multiple_choice'
-        ? item.question.content.split('\n').filter((line: string) => /^[A-D]\./.test(line))
-        : undefined,
-      correctAnswer: typeof item.answer === 'string' ? item.answer : item.answer.join(', '),
-      explanation: item.analysis || 'No explanation available.',
-      knowledgePoint: point.name
-    }))
-
-    return convertedQuestions
+    void startPracticeAgent(
+      "weak-point",
+      {
+        knowledgePoints: [point.name],
+        difficulty: point.weaknessLevel >= 75 ? "hard" : point.weaknessLevel >= 55 ? "medium" : "easy",
+        quantity: 6,
+      },
+      point
+    )
   }
 
   const handleSubmitAnswer = () => {
@@ -324,21 +417,24 @@ export default function GeneratePracticePage() {
 
     const currentQuestion = questions[currentQuestionIndex]
     const timeSpent = Math.floor((new Date().getTime() - questionStartTime.getTime()) / 1000)
-    const isCorrect = currentAnswer === currentQuestion.correctAnswer
+    const normalizedUserAnswer = currentAnswer.match(/^([A-D])\./)?.[1] || currentAnswer.trim()
+    const normalizedCorrectAnswer = currentQuestion.correctAnswer.trim()
+    const isCorrect = normalizedUserAnswer === normalizedCorrectAnswer
 
     const userAnswer: UserAnswer = {
       questionId: currentQuestion.id,
-      answer: currentAnswer,
+      answer: normalizedUserAnswer,
       isCorrect,
       timeSpent,
     }
 
-    const newAnswers = [...userAnswers, userAnswer]
+    const newAnswers = [...userAnswers]
+    newAnswers[currentQuestionIndex] = userAnswer
     setUserAnswers(newAnswers)
 
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1)
-      setCurrentAnswer("")
+      setCurrentAnswer(hydrateAnswerForQuestion(questions[currentQuestionIndex + 1], newAnswers[currentQuestionIndex + 1]?.answer))
       setQuestionStartTime(new Date())
     } else {
       saveResults(newAnswers)
@@ -365,9 +461,9 @@ export default function GeneratePracticePage() {
       questions: questions.map((q, index) => ({
         id: q.id,
         question: q.question,
-        userAnswer: answers[index].answer,
+        userAnswer: answers[index]?.answer || "",
         correctAnswer: q.correctAnswer,
-        isCorrect: answers[index].isCorrect,
+        isCorrect: answers[index]?.isCorrect || false,
         explanation: q.explanation,
       })),
     }
@@ -394,6 +490,7 @@ export default function GeneratePracticePage() {
     setUserAnswers([])
     setCurrentQuestionIndex(0)
     setCurrentAnswer("")
+    setAgentRun(null)
     const points = practiceStorage.getWeakPoints()
     setWeakPoints(points.sort((a, b) => b.weaknessLevel - a.weaknessLevel))
   }
@@ -425,6 +522,7 @@ export default function GeneratePracticePage() {
               <Brain className="h-5 w-5 text-primary" />
               <h1 className="text-xl font-semibold text-foreground">
                 {viewMode === "selection" && "Practice"}
+                {viewMode === "agent-run" && "Agent Run"}
                 {viewMode === "practice" && "Practice Session"}
                 {viewMode === "analysis" && "Session Analysis"}
               </h1>
@@ -436,55 +534,31 @@ export default function GeneratePracticePage() {
       {/* Main Content */}
       <main className="container mx-auto px-6 py-12">
         <div className="max-w-7xl mx-auto">
-          {/* Generating Overlay */}
-          {isGenerating && (
-            <div className="space-y-6">
-              <Card className="border-border/50 bg-gradient-to-br from-primary/5 to-secondary/5">
-                <CardContent className="p-12">
-                  <div className="space-y-8 text-center">
-                    <div className="flex justify-center">
-                      <div className="relative">
-                        <div className="h-24 w-24 rounded-full bg-primary/10 flex items-center justify-center">
-                          <Loader2 className="h-12 w-12 text-primary animate-spin" />
-                        </div>
-                        <div className="absolute -top-2 -right-2">
-                          <Sparkles className="h-8 w-8 text-secondary animate-pulse" />
-                        </div>
-                      </div>
-                    </div>
+          {viewMode === "agent-run" && agentRun && (
+            <PracticeAgentRunPanel
+              run={agentRun}
+              onUseCurrentSet={() => launchPracticeSession(agentRun)}
+              onRetry={() => {
+                if (!agentRun.plan || agentRun.retryCount >= 1) return
 
-                    <div className="space-y-3">
-                      <h2 className="text-2xl font-bold text-foreground">
-                        {generatingStep === "analyzing" && "Analyzing Your Performance"}
-                        {generatingStep === "identifying" && "Identifying Weak Areas"}
-                        {generatingStep === "generating" && "Generating Practice Questions"}
-                        {generatingStep === "done" && "Almost Ready!"}
-                      </h2>
-                      <p className="text-muted-foreground">
-                        {generatingStep === "analyzing" && "Reviewing your past practice records and performance metrics..."}
-                        {generatingStep === "identifying" && `Focusing on ${selectedPoint?.name} concepts that need improvement...`}
-                        {generatingStep === "generating" && "Creating personalized questions tailored to your level..."}
-                        {generatingStep === "done" && "Preparing your practice session..."}
-                      </p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Progress value={generatingProgress} className="h-3" />
-                      <p className="text-sm text-muted-foreground">{generatingProgress}% Complete</p>
-                    </div>
-
-                    <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                      <Brain className="h-4 w-4" />
-                      <span>AI-powered question generation in progress</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+                void runGenerateAndReview(
+                  {
+                    ...agentRun,
+                    status: "running",
+                    canUseCurrentSet: false,
+                    review: undefined,
+                    timeline: [...agentRun.timeline, "Manual retry requested from the agent panel."],
+                  },
+                  agentRun.plan,
+                  agentRun.retryCount + 1
+                )
+              }}
+              onBackToSelection={handleRetry}
+            />
           )}
 
           {/* Selection Mode with Tabs */}
-          {viewMode === "selection" && !isGenerating && (
+          {viewMode === "selection" && (
             <Tabs defaultValue="question-bank" className="w-full">
               <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto mb-8">
                 <TabsTrigger value="question-bank" className="gap-2">
@@ -572,11 +646,11 @@ export default function GeneratePracticePage() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                      {weakestPoints.map((point) => (
+                      {personalizedPoints.map((point) => (
                         <Card
                           key={point.id}
                           className="border-border/50 bg-card/50 hover:bg-accent/5 cursor-pointer transition-all hover:shadow-md"
-                          onClick={() => handleSelectKnowledgePoint(point as WeakKnowledgePoint)}
+                          onClick={() => handleSelectKnowledgePoint(point)}
                         >
                           <CardContent className="p-4">
                             <div className="space-y-3">
@@ -652,6 +726,30 @@ export default function GeneratePracticePage() {
                 <QuestionTimer startTime={questionStartTime} />
               </div>
 
+              {agentRun?.plan && agentRun?.review && (
+                <Card className="border-border/50 bg-gradient-to-br from-primary/5 to-secondary/5">
+                  <CardContent className="p-4">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <ClipboardList className="h-4 w-4 text-primary" />
+                          <p className="text-sm font-medium text-foreground">Agent session context</p>
+                        </div>
+                        <p className="text-sm text-muted-foreground">{agentRun.plan.summary}</p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Badge variant="secondary">{agentRun.plan.focusKnowledge}</Badge>
+                        <Badge variant="outline">{agentRun.plan.targetDifficulty}</Badge>
+                        <Badge variant={agentRun.review.passed ? "default" : "destructive"} className="gap-1">
+                          <ShieldCheck className="h-3 w-3" />
+                          Review {agentRun.review.score}
+                        </Badge>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               <Card className="border-border/50 bg-card">
                 <CardHeader>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
@@ -699,7 +797,12 @@ export default function GeneratePracticePage() {
                       onClick={() => {
                         if (currentQuestionIndex > 0) {
                           setCurrentQuestionIndex(currentQuestionIndex - 1)
-                          setCurrentAnswer(userAnswers[currentQuestionIndex - 1]?.answer || "")
+                          setCurrentAnswer(
+                            hydrateAnswerForQuestion(
+                              questions[currentQuestionIndex - 1],
+                              userAnswers[currentQuestionIndex - 1]?.answer
+                            )
+                          )
                         }
                       }}
                     >
@@ -779,7 +882,7 @@ export default function GeneratePracticePage() {
                           <CardContent className="p-4 space-y-3">
                             <div className="flex items-start gap-3">
                               <div className="flex-shrink-0 mt-1">
-                                {userAnswer.isCorrect ? (
+                                {userAnswer?.isCorrect ? (
                                   <CheckCircle2 className="h-5 w-5 text-primary" />
                                 ) : (
                                   <XCircle className="h-5 w-5 text-destructive" />
@@ -792,7 +895,7 @@ export default function GeneratePracticePage() {
                                   </h4>
                                   <Badge variant="outline" className="gap-1">
                                     <Clock className="h-3 w-3" />
-                                    {userAnswer.timeSpent}s
+                                    {userAnswer?.timeSpent || 0}s
                                   </Badge>
                                 </div>
                                 <p className="text-sm text-foreground">{question.question}</p>
@@ -802,11 +905,11 @@ export default function GeneratePracticePage() {
                                 <div className="space-y-2 text-sm">
                                   <div className="flex items-start gap-2">
                                     <span className="text-muted-foreground font-medium">Your answer:</span>
-                                    <span className={userAnswer.isCorrect ? "text-primary font-medium" : "text-destructive font-medium"}>
-                                      {userAnswer.answer}
+                                    <span className={userAnswer?.isCorrect ? "text-primary font-medium" : "text-destructive font-medium"}>
+                                      {userAnswer?.answer || "No answer"}
                                     </span>
                                   </div>
-                                  {!userAnswer.isCorrect && (
+                                  {!userAnswer?.isCorrect && (
                                     <div className="flex items-start gap-2">
                                       <span className="text-muted-foreground font-medium">Correct answer:</span>
                                       <span className="text-primary font-medium">{question.correctAnswer}</span>
