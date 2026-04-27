@@ -76,6 +76,9 @@ export function useLangGraphStream(): UseLangGraphStreamReturn {
 
   const clientRef = useRef(new Client({ apiUrl: LANGGRAPH_URL }));
   const abortControllerRef = useRef<AbortController | null>(null);
+  // Track thread/run IDs so we can explicitly cancel backend runs
+  const threadIdRef = useRef<string | null>(null);
+  const runIdRef = useRef<string | null>(null);
 
   const addEvent = useCallback((event: StreamEvent) => {
     setEvents((prev) => [...prev, event]);
@@ -269,10 +272,17 @@ export function useLangGraphStream(): UseLangGraphStreamReturn {
 
       abortControllerRef.current = new AbortController();
       const signal = abortControllerRef.current.signal;
+      // Reset run tracking refs
+      threadIdRef.current = null;
+      runIdRef.current = null;
 
       try {
         // ── VCR: try to load a cached tape ──────────────────────────
-        const cacheKey = buildCacheKey(targetKnowledge);
+        // Prefer the caller-supplied studentName over re-reading localStorage,
+        // so there is no race with the 500 ms debounce write in UserProfileSidebar.
+        const cacheKey = studentName
+          ? `${studentName.trim()}::${targetKnowledge?.trim() || "_default_"}`
+          : buildCacheKey(targetKnowledge);
         let tape = cacheKey ? await loadTape(cacheKey) : null;
 
         if (tape) {
@@ -318,6 +328,9 @@ export function useLangGraphStream(): UseLangGraphStreamReturn {
             revision_count: 0,
           };
 
+          // Store thread ID so we can cancel the run later
+          threadIdRef.current = thread.thread_id;
+
           // Stream the graph execution
           const stream = clientRef.current.runs.stream(
             thread.thread_id,
@@ -325,6 +338,9 @@ export function useLangGraphStream(): UseLangGraphStreamReturn {
             {
               input: inputState,
               streamMode: "updates",
+              signal,
+              // Tell the server to cancel the run when the client disconnects
+              onDisconnect: "cancel",
               config: {
                 configurable: {
                   model_name: "kimi-k2.6",
@@ -333,6 +349,16 @@ export function useLangGraphStream(): UseLangGraphStreamReturn {
                   api_key: process.env.NEXT_PUBLIC_API_KEY || "",
                 },
                 recursion_limit: 50,
+              },
+              // Capture the run ID so we can explicitly cancel it
+              onRunCreated: ({ run_id }) => {
+                runIdRef.current = run_id;
+                addEvent({
+                  timestamp: new Date(),
+                  node: "system",
+                  data: { message: `Run created: ${run_id}` },
+                  type: "update",
+                });
               },
             }
           );
@@ -358,22 +384,41 @@ export function useLangGraphStream(): UseLangGraphStreamReturn {
           }
         }
 
-        // Mark final event
-        addEvent({
-          timestamp: new Date(),
-          node: "system",
-          data: { message: "Stream completed successfully" },
-          type: "final",
-        });
+        // Mark final event (only if not aborted by the user)
+        if (!signal.aborted) {
+          addEvent({
+            timestamp: new Date(),
+            node: "system",
+            data: { message: "Stream completed successfully" },
+            type: "final",
+          });
+        } else {
+          addEvent({
+            timestamp: new Date(),
+            node: "system",
+            data: { message: "Stream stopped by user" },
+            type: "final",
+          });
+        }
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
-        setError(errorMessage);
-        addEvent({
-          timestamp: new Date(),
-          node: "system",
-          data: { error: errorMessage },
-          type: "final",
-        });
+        // Ignore AbortError — it's expected when the user clicks "stop"
+        if (err instanceof DOMException && err.name === "AbortError") {
+          addEvent({
+            timestamp: new Date(),
+            node: "system",
+            data: { message: "Stream stopped by user" },
+            type: "final",
+          });
+        } else {
+          const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+          setError(errorMessage);
+          addEvent({
+            timestamp: new Date(),
+            node: "system",
+            data: { error: errorMessage },
+            type: "final",
+          });
+        }
       } finally {
         setIsStreaming(false);
         setActiveNode(null);
@@ -383,7 +428,28 @@ export function useLangGraphStream(): UseLangGraphStreamReturn {
   );
 
   const stopStream = useCallback(() => {
+    // 1. Abort the client-side stream reader (breaks the for-await loop)
     abortControllerRef.current?.abort();
+
+    // 2. Explicitly cancel the backend run so the server stops processing
+    const threadId = threadIdRef.current;
+    const runId = runIdRef.current;
+    if (threadId && runId) {
+      clientRef.current.runs
+        .cancel(threadId, runId, /* wait */ false, /* action */ "interrupt")
+        .then(() => {
+          console.log(`[LangGraph] Run ${runId} cancelled on server`);
+        })
+        .catch((err) => {
+          // Best-effort: if the run already finished or the server is unreachable, ignore
+          console.warn(`[LangGraph] Failed to cancel run ${runId}:`, err);
+        });
+    }
+
+    // 3. Clear tracking refs
+    threadIdRef.current = null;
+    runIdRef.current = null;
+
     setIsStreaming(false);
     setActiveNode(null);
   }, []);
